@@ -18,6 +18,7 @@ from services.scheduler import (
     build_exercises_from_cards,
     save_progress,
 )
+from services.parsers import extract_text
 from pathlib import Path
 
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -45,6 +46,66 @@ def api_config():
     os.environ["OPENAI_API_KEY"] = key
     ENV_FILE.write_text(f"OPENAI_API_KEY={key}\n", encoding="utf-8")
     return jsonify({"saved": True})
+
+
+@app.route("/api/upload", methods=["POST"])
+def upload_file():
+    """Handle document upload and full analysis pipeline."""
+    uploaded = request.files.get("file")
+    if not uploaded:
+        return jsonify({"error": "no file"}), 400
+    use_ai = request.form.get("use_ai", "false").lower() == "true"
+    minutes = int(request.form.get("session_minutes", 0))
+    import tempfile
+    from datetime import date
+
+    tmp = tempfile.NamedTemporaryFile(delete=False)
+    uploaded.save(tmp.name)
+    try:
+        text = extract_text(tmp.name, uploaded.filename)
+    finally:
+        os.unlink(tmp.name)
+
+    offline_drafts = analyze_offline(text)
+    drafts = offline_drafts
+    if use_ai and os.getenv("OPENAI_API_KEY"):
+        context = get_context(text)
+        combined = "\n".join(context) + "\n\n" + text if context else text
+        ai_drafts = analyze_text(combined, "upload")
+        drafts = validate_items(offline_drafts + ai_drafts)
+    else:
+        drafts = validate_items(offline_drafts)
+
+    for d in drafts:
+        d.setdefault("status", "new")
+
+    db = load_db()
+    db["drafts"].extend(drafts)
+    for d in drafts:
+        payload = d.get("payload", {})
+        if d.get("kind") == "card":
+            payload.setdefault("id", d.get("id"))
+            payload.setdefault(
+                "srs",
+                {"EF": 2.5, "interval": 1, "reps": 0, "due": date.today().isoformat()},
+            )
+            db.setdefault("cards", []).append(payload)
+        elif d.get("kind") == "exercise":
+            db.setdefault("exercises", []).append(payload)
+        elif d.get("kind") == "course":
+            db.setdefault("courses", []).append(payload)
+    save_db(db)
+
+    plan = generate_plan(db.get("drafts", []))
+    themes = list({d.get("payload", {}).get("theme", "Général") for d in drafts})
+    due = due_cards(db)
+    return jsonify({
+        "saved": len(drafts),
+        "plan": plan,
+        "themes": themes,
+        "due": due,
+        "minutes": minutes,
+    })
 
 
 @app.route("/api/offline/analyze", methods=["POST"])

@@ -40,6 +40,7 @@ setInterval(() => {
 
 // offline analyze
 const btn = document.getElementById('analyze-btn');
+const uploadBtn = document.getElementById('upload-btn');
 
 async function renderDrafts(list) {
   const drafts = document.getElementById('drafts');
@@ -77,6 +78,19 @@ btn.addEventListener('click', async () => {
   });
   const data = await resp.json();
   renderDrafts(data.drafts);
+});
+
+uploadBtn.addEventListener('click', async () => {
+  const fileInput = document.getElementById('file-input');
+  const file = fileInput.files[0];
+  if (!file) return;
+  const form = new FormData();
+  form.append('file', file);
+  form.append('use_ai', document.getElementById('use-ai-upload').checked);
+  form.append('session_minutes', document.getElementById('session-minutes').value);
+  const resp = await fetch('/api/upload', { method: 'POST', body: form });
+  const data = await resp.json();
+  alert(`Fiches sauvegardées: ${data.saved}`);
 });
 
 aiBtn.addEventListener('click', async () => {

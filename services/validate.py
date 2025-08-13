@@ -128,6 +128,8 @@ def validate_exercise(ex: Dict) -> None:
 
 
 def validate_items(items: List[Dict]) -> List[Dict]:
+    global seen_hashes
+    seen_hashes = set()
     validated = []
     for item in items:
         kind = item.get("kind")

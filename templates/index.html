@@ -20,6 +20,14 @@
 
     <main class="wrapper">
         <section id="import" class="panel active" role="tabpanel">
+            <input type="file" id="file-input" accept=".txt,.md,.pdf,.docx" />
+            <select id="session-minutes">
+                <option value="10">10 min</option>
+                <option value="25" selected>25 min</option>
+                <option value="45">45 min</option>
+            </select>
+            <label><input type="checkbox" id="use-ai-upload" /> IA</label>
+            <button id="upload-btn">Envoyer</button>
             <textarea id="source-text" placeholder="Colle ton texte ici..."></textarea>
             <button id="analyze-btn">Analyser</button>
             <button id="ai-btn" disabled>Améliorer via IA</button>

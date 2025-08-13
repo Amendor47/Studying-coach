@@ -65,22 +65,35 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
     user = text + "\nStrict JSON"
 
     def call_fn(sys: str, usr: str) -> Dict[str, Any]:
+        """Perform the actual OpenAI API call using the modern client."""
         try:
-            import openai  # type: ignore
+            from openai import OpenAI  # type: ignore
+            from openai.error import OpenAIError, RateLimitError as _RateLimit
         except Exception:
+            # OpenAI package not installed
             return {"flashcards": [], "exercices": []}
 
         key = os.getenv("OPENAI_API_KEY")
         if not key:
             return {"flashcards": [], "exercices": []}
-        openai.api_key = key
-        resp = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": sys}, {"role": "user", "content": usr}],
-            temperature=0,
-        )
+
+        client = OpenAI(api_key=key)
         try:
-            return json.loads(resp["choices"][0]["message"]["content"])
+            resp = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": sys},
+                    {"role": "user", "content": usr},
+                ],
+                temperature=0,
+            )
+        except _RateLimit as err:  # surface rate limits to cached_call
+            raise RateLimitError(str(err))
+        except OpenAIError:
+            return {"flashcards": [], "exercices": []}
+
+        try:
+            return json.loads(resp.choices[0].message.content)
         except Exception:
             return {"flashcards": [], "exercices": []}
 

@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Coach de Révision</title>
+    <meta name="color-scheme" content="light dark" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
@@ -17,7 +18,7 @@
         </nav>
     </header>
 
-    <main>
+    <main class="wrapper">
         <section id="import" class="panel active" role="tabpanel">
             <textarea id="source-text" placeholder="Colle ton texte ici..."></textarea>
             <button id="analyze-btn">Analyser</button>

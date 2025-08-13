@@ -5,6 +5,13 @@ const keyModal = document.getElementById('key-modal');
 const saveKey = document.getElementById('save-key');
 const keyInput = document.getElementById('key-input');
 
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
 for (const tab of tabs) {
   tab.addEventListener('click', () => {
     tabs.forEach(t => t.classList.remove('active'));
@@ -130,19 +137,31 @@ function renderCourseCards(theme, list) {
     inner.appendChild(front);
     inner.appendChild(back);
     card.appendChild(inner);
-    card.addEventListener('click', () => card.classList.toggle('flip'));
+    const elab = document.createElement('div');
+    elab.className = 'elab';
+    elab.textContent = 'Pourquoi ?';
+    elab.style.display = 'none';
+    card.addEventListener('click', () => {
+      card.classList.toggle('flip');
+      elab.style.display = card.classList.contains('flip') ? 'block' : 'none';
+    });
 
     const actions = document.createElement('div');
+    const elaborer = document.createElement('button');
+    elaborer.textContent = 'Élaborer';
+    elaborer.onclick = () => prompt('Pourquoi ?');
     const ok = document.createElement('button');
     ok.textContent = 'Maîtrisée';
     ok.onclick = () => updateStatus(d.id, 'mastered');
     const again = document.createElement('button');
     again.textContent = 'À revoir';
     again.onclick = () => updateStatus(d.id, 'review');
+    actions.appendChild(elaborer);
     actions.appendChild(ok);
     actions.appendChild(again);
 
     container.appendChild(card);
+    container.appendChild(elab);
     container.appendChild(actions);
   });
 }
@@ -170,6 +189,7 @@ function renderDueCards(list) {
     container.textContent = 'Aucune carte à réviser.';
     return;
   }
+  shuffle(list);
   list.forEach(c => {
     const card = document.createElement('div');
     card.className = 'flashcard';
@@ -184,7 +204,14 @@ function renderDueCards(list) {
     inner.appendChild(front);
     inner.appendChild(back);
     card.appendChild(inner);
-    card.addEventListener('click', () => card.classList.toggle('flip'));
+    const elab = document.createElement('div');
+    elab.className = 'elab';
+    elab.textContent = 'Pourquoi ?';
+    elab.style.display = 'none';
+    card.addEventListener('click', () => {
+      card.classList.toggle('flip');
+      elab.style.display = card.classList.contains('flip') ? 'block' : 'none';
+    });
 
     const actions = document.createElement('div');
     ['0','1','2','3','4','5'].forEach(q => {
@@ -195,6 +222,7 @@ function renderDueCards(list) {
     });
 
     container.appendChild(card);
+    container.appendChild(elab);
     container.appendChild(actions);
   });
 }

@@ -4,6 +4,10 @@ const aiBtn = document.getElementById('ai-btn');
 const keyModal = document.getElementById('key-modal');
 const saveKey = document.getElementById('save-key');
 const keyInput = document.getElementById('key-input');
+const webQ = document.getElementById('web-q');
+const webSearchBtn = document.getElementById('web-search');
+const webAI = document.getElementById('web-ai');
+const webResults = document.getElementById('web-results');
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -102,6 +106,34 @@ aiBtn.addEventListener('click', async () => {
   });
   const data = await resp.json();
   renderDrafts(data.drafts);
+});
+
+webSearchBtn?.addEventListener('click', async () => {
+  const q = (webQ.value || '').trim();
+  if (!q) return;
+  webResults.textContent = 'Recherche...';
+  const r = await fetch(`/api/web/search?q=${encodeURIComponent(q)}`);
+  const data = await r.json();
+  webResults.innerHTML = '';
+  data.results.forEach(res => {
+    const div = document.createElement('div');
+    div.className = 'draft';
+    div.innerHTML = `<b>${res.title}</b> — <a href="${res.url}" target="_blank">source</a><br>${res.excerpt}`;
+    webResults.appendChild(div);
+  });
+  const enrichBtn = document.createElement('button');
+  enrichBtn.textContent = 'Ajouter ces résultats à mes fiches';
+  enrichBtn.onclick = async () => {
+    enrichBtn.disabled = true;
+    const resp = await fetch('/api/web/enrich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q, use_ai: webAI.checked })
+    });
+    const out = await resp.json();
+    alert(`Ajouté: ${out.added} items.\nSources:\n- ${out.citations.map(c=>c.title).join('\n- ')}`);
+  };
+  webResults.appendChild(enrichBtn);
 });
 
 // --- FICHES DE COURS ---

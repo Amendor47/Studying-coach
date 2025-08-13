@@ -4,3 +4,6 @@ python-docx
 pdfminer.six
 reportlab
 pyinstaller
+requests
+beautifulsoup4
+trafilatura

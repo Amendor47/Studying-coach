@@ -11,6 +11,8 @@ Prototype studying coach backend inspired by SPEC-2 (V2 "Réussite Max").
   "Améliorer via IA" button.
 - Cache and log wrapper for LLM calls (`services/ai.py`).
 - Optional local semantic search feeding AI context (`services/rag.py`).
+- Optional web enrichment: DuckDuckGo search + scraping with caching
+  (`services/webfetch.py`) and UI button to add results as new fiches.
 - JSON store helpers (`services/store.py`).
 - Planner and SM‑2 scheduler (`services/planner.py`, `services/scheduler.py`) with
   interleaving of due cards across themes and API routes to fetch and record reviews.

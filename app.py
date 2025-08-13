@@ -19,6 +19,7 @@ from services.scheduler import (
     save_progress,
 )
 from services.parsers import extract_text
+from services.webfetch import web_context_from_query
 from pathlib import Path
 
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -266,6 +267,63 @@ def export_route(fmt: str):
         except Exception:
             return jsonify({"error": "docx export unavailable"}), 500
     return jsonify({"error": "format inconnu"}), 400
+
+
+@app.route("/api/web/search", methods=["GET"])
+def web_search():
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify({"results": []})
+    results = web_context_from_query(q, k_pages=5)
+    return jsonify({
+        "results": [
+            {"title": r["title"], "url": r["url"], "excerpt": r["excerpt"][:300]}
+            for r in results
+        ]
+    })
+
+
+@app.route("/api/web/enrich", methods=["POST"])
+def web_enrich():
+    data = request.get_json(force=True)
+    query = data.get("query", "").strip()
+    use_ai = bool(data.get("use_ai", False))
+    if not query:
+        return jsonify({"added": 0, "drafts": [], "citations": []})
+
+    pages = web_context_from_query(query, k_pages=3, max_chars=5000)
+    combined = "\n\n".join([p["excerpt"] for p in pages])
+    offline_drafts = analyze_offline(combined)
+
+    drafts = offline_drafts
+    if use_ai and os.getenv("OPENAI_API_KEY"):
+        context_text = "".join(f"\n# {p['title']}\n{p['excerpt']}\n" for p in pages)
+        ai_drafts = analyze_text(context_text, reason="web+rag")
+        drafts = validate_items(offline_drafts + ai_drafts)
+    else:
+        drafts = validate_items(offline_drafts)
+
+    db = load_db()
+    from datetime import date
+    for d in drafts:
+        d.setdefault("status", "new")
+        db["drafts"].append(d)
+        payload = d.get("payload", {})
+        if d.get("kind") == "card":
+            payload.setdefault("id", d.get("id"))
+            payload.setdefault(
+                "srs",
+                {"EF": 2.5, "interval": 1, "reps": 0, "due": date.today().isoformat()},
+            )
+            db.setdefault("cards", []).append(payload)
+        elif d.get("kind") == "exercise":
+            db.setdefault("exercises", []).append(payload)
+        elif d.get("kind") == "course":
+            db.setdefault("courses", []).append(payload)
+    save_db(db)
+
+    citations = [{"title": p["title"], "url": p["url"]} for p in pages]
+    return jsonify({"added": len(drafts), "drafts": drafts, "citations": citations})
 
 
 @app.route("/")

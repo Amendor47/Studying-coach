@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Study Coach - UI Fixes Demo</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 40px; background: #f5f5f5; }
+    .demo-section { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .file-input { border: 2px dashed #ccc; padding: 40px; text-align: center; margin: 20px 0; border-radius: 8px; transition: all 0.3s; }
+    .file-input:hover { border-color: #00e0b8; background: rgba(0,224,184,0.05); }
+    .error-demo { background: #ff4444; color: white; padding: 10px 15px; border-radius: 5px; margin: 10px 0; }
+    .code { background: #f0f0f0; padding: 15px; border-radius: 4px; font-family: monospace; margin: 10px 0; }
+    .success { color: #00aa44; } .error { color: #cc0000; }
+  </style>
+</head>
+<body>
+  <h1>Study Coach - UI Interaction Fixes</h1>
+  <p>This demo shows the implemented UI fixes following the problem statement approach.</p>
+
+  <div class="demo-section">
+    <h2>1. Error Overlay System</h2>
+    <p>JavaScript errors are now captured and displayed:</p>
+    <button onclick="triggerError()">Test Error Overlay</button>
+    <div class="code">
+      // UI Error Overlay captures window.onerror and unhandledrejection
+      // Shows errors in red overlay at top-right corner
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>2. Base URL Helper</h2>
+    <p>All API calls now use getBaseURL() for consistent routing:</p>
+    <div class="code">
+      // Before: fetch('/api/upload', ...)
+      // After: fetch(`${getBaseURL()}/api/upload`, ...)
+    </div>
+    <button onclick="testAPI()">Test API Call</button>
+    <div id="api-result"></div>
+  </div>
+
+  <div class="demo-section">
+    <h2>3. Drag & Drop Enhancement</h2>
+    <div class="file-input" id="drop-zone">
+      📁 Drag & Drop Files Here
+      <br><small>Visual feedback with state changes</small>
+    </div>
+    <div class="code">
+      States: Default → Drag Enter → Uploading → Success/Error
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h2>4. Backend Improvements</h2>
+    <ul>
+      <li class="success">✅ Permissive CORS enabled for development</li>
+      <li class="success">✅ Added /api/improve endpoint with fallback</li>
+      <li class="success">✅ Comprehensive logging added</li>
+      <li class="success">✅ Error handling improved</li>
+    </ul>
+  </div>
+
+  <div class="demo-section">
+    <h2>5. Diagnostic Tools</h2>
+    <ul>
+      <li class="success">✅ tools/doctor.sh - System health check</li>
+      <li class="success">✅ tools/smoke.sh - API endpoint testing</li>
+      <li class="success">✅ tests/validate.py - Code validation</li>
+    </ul>
+  </div>
+
+  <!-- Base URL and Error Handling Scripts -->
+  <script>window.__BASE_URL__ = "";</script>
+  <script>
+    // Base URL Helper
+    function getBaseURL() {
+      return window.__BASE_URL__ || "";
+    }
+
+    // UI Error Overlay
+    let errorCount = 0;
+    function showError(message) {
+      errorCount++;
+      const overlay = document.createElement('div');
+      overlay.className = 'error-demo';
+      overlay.innerHTML = `<strong>JS Error #${errorCount}:</strong> ${message}`;
+      overlay.style.cssText = `
+        position: fixed; top: 10px; right: 10px; z-index: 10000;
+        cursor: pointer; max-width: 300px;
+      `;
+      overlay.onclick = () => overlay.remove();
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.remove(), 5000);
+    }
+
+    window.addEventListener('error', function(event) {
+      showError(event.message || 'Unknown error');
+    });
+
+    // Demo functions
+    function triggerError() {
+      setTimeout(() => {
+        throw new Error("This is a demo error to show the error overlay!");
+      }, 100);
+    }
+
+    function testAPI() {
+      const result = document.getElementById('api-result');
+      result.innerHTML = `<div class="code">Making API call to: ${getBaseURL()}/api/health</div>`;
+      // Simulate API call (would fail since no server, but shows the pattern)
+    }
+
+    // Drag & Drop Demo
+    const dropZone = document.getElementById('drop-zone');
+    let dragCounter = 0;
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => {
+        dragCounter++;
+        dropZone.style.backgroundColor = 'rgba(0, 224, 184, 0.1)';
+        dropZone.style.borderColor = '#00e0b8';
+        dropZone.innerHTML = '📁 Drop your file here!';
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => {
+        dragCounter--;
+        if (dragCounter <= 0) {
+          dragCounter = 0;
+          dropZone.style.backgroundColor = '';
+          dropZone.style.borderColor = '#ccc';
+          dropZone.innerHTML = '📁 Drag & Drop Files Here<br><small>Visual feedback with state changes</small>';
+        }
+      }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        dropZone.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+        dropZone.innerHTML = '✅ File received: ' + files[0].name;
+        setTimeout(() => {
+          dropZone.style.backgroundColor = '';
+          dropZone.innerHTML = '📁 Drag & Drop Files Here<br><small>Visual feedback with state changes</small>';
+        }, 3000);
+      }
+    }, false);
+
+    console.log('Study Coach UI Demo Loaded - Try the interactive features!');
+  </script>
+</body>
+</html>

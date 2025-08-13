@@ -54,6 +54,52 @@ def normalize_key(front: str, back: str) -> str:
 seen_hashes = set()
 
 
+def seed_seen_hashes(db: Dict) -> None:
+    """Populate ``seen_hashes`` with hashes from existing DB records.
+
+    This ensures that calls to :func:`validate_items` take into account
+    cards and exercises already stored in the database so that duplicate
+    uploads are skipped.
+    """
+    seen_hashes.clear()
+
+    for card in db.get("cards", []):
+        ctype = card.get("type", "QA").upper()
+        front = card.get("front") or card.get("recto")
+        if ctype == "QA":
+            key_back = card.get("back") or card.get("verso")
+        elif ctype == "QCM":
+            key_back = card.get("answer") or card.get("reponse")
+        elif ctype == "VF":
+            key_back = card.get("answer") or card.get("reponse")
+        elif ctype == "CLOZE":
+            key_back = normalize_answer(card.get("answer") or card.get("reponse"))
+        elif ctype == "RC":
+            key_back = card.get("answer") or card.get("reponse")
+        else:
+            continue
+
+        h = normalize_key(front, str(key_back))
+        seen_hashes.add(h)
+
+    for ex in db.get("exercises", []):
+        qtype = (ex.get("type") or "").lower()
+        qtext = ex.get("q") or ex.get("question")
+        if qtype == "qcm":
+            key_back = ex.get("answer") or ex.get("reponse")
+        elif qtype == "cloze":
+            key_back = normalize_answer(ex.get("answer") or "")
+        elif qtype == "vf":
+            key_back = ex.get("answer")
+        elif qtype == "rc":
+            key_back = ex.get("answer")
+        else:
+            continue
+
+        h = normalize_key(qtext, str(key_back))
+        seen_hashes.add(h)
+
+
 def validate_card(card: Dict) -> None:
     ctype = card.get("type", "QA").upper()
     front = card.get("front") or card.get("recto")

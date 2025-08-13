@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='design-system.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='advanced-flashcards.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='debug.css') }}" />
   
   <!-- PWA Support -->
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />
@@ -463,6 +464,7 @@
   <script>window.__BASE_URL__="";</script>
   <script src="{{ url_for('static', filename='baseurl.js') }}"></script>
   <script src="{{ url_for('static', filename='ui_error_overlay.js') }}"></script>
+  <script src="{{ url_for('static', filename='dom_probe.js') }}" defer></script>
   
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='performance-monitor.js') }}" defer></script>

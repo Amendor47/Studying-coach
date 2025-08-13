@@ -1,0 +1,243 @@
+/* debug.css - Outils de visualisation et debug pour l'UI */
+
+/* Mode debug - highlight des éléments cliquables */
+[data-debug-clickable] :is(a, button, [role="button"], input[type="file"], .dropzone, .btn) {
+    outline: 2px dashed #00e0b8 !important;
+    outline-offset: 2px !important;
+}
+
+[data-debug-clickable] :is(a, button, [role="button"], input[type="file"], .dropzone, .btn):hover {
+    outline-color: #ffc107 !important;
+    outline-width: 3px !important;
+}
+
+/* Overlay de debug - ne bloque pas les interactions */
+.debug-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    pointer-events: none !important;
+    z-index: 99999 !important;
+    background: rgba(0, 224, 184, 0.1) !important;
+    border: 2px solid #00e0b8 !important;
+    font-family: monospace !important;
+    font-size: 12px !important;
+    color: #00e0b8 !important;
+    padding: 8px !important;
+    display: none;
+}
+
+/* Classe utilitaire - forcer pointer-events */
+.pe-auto { 
+    pointer-events: auto !important; 
+}
+
+.pe-none { 
+    pointer-events: none !important; 
+}
+
+/* Info bulle pour debug */
+.debug-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: #00e0b8;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    z-index: 100000;
+    max-width: 300px;
+    word-wrap: break-word;
+    border: 1px solid #00e0b8;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.debug-tooltip.show {
+    opacity: 1;
+}
+
+/* Mode debug actif sur body */
+body[data-debug="true"] {
+    cursor: crosshair;
+}
+
+body[data-debug="true"] * {
+    box-sizing: border-box;
+}
+
+/* Highlight des éléments avec pointer-events: none */
+body[data-debug="true"] *[style*="pointer-events: none"],
+body[data-debug="true"] *[style*="pointer-events:none"] {
+    outline: 2px solid #dc3545 !important;
+    outline-offset: -2px !important;
+}
+
+/* Highlight des overlays potentiels */
+body[data-debug="true"] *[style*="position: fixed"],
+body[data-debug="true"] *[style*="position:fixed"],
+body[data-debug="true"] *[style*="position: absolute"],
+body[data-debug="true"] *[style*="position:absolute"] {
+    box-shadow: inset 0 0 0 1px rgba(255, 193, 7, 0.5) !important;
+}
+
+/* Highlight des éléments avec z-index élevé */
+body[data-debug="true"] *[style*="z-index"] {
+    position: relative;
+}
+
+body[data-debug="true"] *[style*="z-index"]:after {
+    content: attr(style);
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(255, 193, 7, 0.9);
+    color: black;
+    padding: 2px 4px;
+    font-size: 10px;
+    font-family: monospace;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* Visualisation des zones de drop */
+body[data-debug="true"] .file,
+body[data-debug="true"] [data-drop-zone] {
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(0, 224, 184, 0.1) 0px,
+        rgba(0, 224, 184, 0.1) 10px,
+        transparent 10px,
+        transparent 20px
+    ) !important;
+}
+
+/* Mode debug pour les formulaires */
+body[data-debug="true"] form {
+    outline: 2px solid #6f42c1 !important;
+    outline-offset: 4px !important;
+}
+
+body[data-debug="true"] form button:not([type]),
+body[data-debug="true"] form button[type="submit"] {
+    background-color: rgba(255, 193, 7, 0.3) !important;
+}
+
+body[data-debug="true"] form button[type="button"] {
+    background-color: rgba(40, 167, 69, 0.3) !important;
+}
+
+/* Debug info panel */
+.debug-info-panel {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.95);
+    color: #00e0b8;
+    padding: 16px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    z-index: 100001;
+    min-width: 200px;
+    max-width: 350px;
+    border: 1px solid #00e0b8;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    display: none;
+}
+
+.debug-info-panel.show {
+    display: block;
+}
+
+.debug-info-panel h4 {
+    margin: 0 0 8px 0;
+    color: #ffc107;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.debug-info-panel .debug-item {
+    margin-bottom: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #333;
+}
+
+.debug-info-panel .debug-item:last-child {
+    border-bottom: none;
+}
+
+.debug-info-panel .debug-key {
+    color: #6c757d;
+    font-weight: bold;
+    display: inline-block;
+    width: 80px;
+}
+
+.debug-info-panel .debug-value {
+    color: #00e0b8;
+}
+
+/* Boutons de debug */
+.debug-controls {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    z-index: 100002;
+    display: none;
+}
+
+.debug-controls.show {
+    display: flex;
+    gap: 8px;
+}
+
+.debug-btn {
+    background: rgba(0, 0, 0, 0.8);
+    color: #00e0b8;
+    border: 1px solid #00e0b8;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.debug-btn:hover {
+    background: #00e0b8;
+    color: black;
+}
+
+/* Classes pour les tests de performance */
+.debug-slow-element {
+    animation: debug-pulse 2s infinite;
+}
+
+@keyframes debug-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Mode contrast élevé pour debug */
+body[data-debug-contrast="true"] {
+    filter: contrast(200%) !important;
+}
+
+/* Affichage des grilles CSS */
+body[data-debug-grid="true"] * {
+    outline: 1px solid rgba(255, 0, 0, 0.2) !important;
+}
+
+body[data-debug-grid="true"] *:nth-child(2n) {
+    outline-color: rgba(0, 255, 0, 0.2) !important;
+}
+
+body[data-debug-grid="true"] *:nth-child(3n) {
+    outline-color: rgba(0, 0, 255, 0.2) !important;
+}

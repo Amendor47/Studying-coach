@@ -1,0 +1,237 @@
+:root {
+    --bg: #f4f6fb;
+    --fg: #1a1a1a;
+    --accent: #0066ff;
+    --radius: 8px;
+    --card-bg: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(230,240,255,0.9));
+    --card-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #1e1e2e;
+        --fg: #f5f5f5;
+        --accent: #4f8cff;
+        --card-bg: linear-gradient(135deg, rgba(40,40,60,0.9), rgba(70,70,90,0.9));
+        --card-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+}
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: var(--bg);
+    color: var(--fg);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+.topbar {
+    padding: 1rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+.tabs {
+    display: flex;
+    gap: 1rem;
+}
+.tab {
+    background: none;
+    border: none;
+    padding: .5rem 1rem;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--fg);
+    transition: background .3s;
+}
+.tab.active {
+    background: var(--accent);
+    color: white;
+}
+main {
+    flex: 1;
+    padding: 1rem;
+}
+.panel {
+    display: none;
+}
+.panel.active {
+    display: block;
+}
+textarea {
+    width: 100%;
+    height: 200px;
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+    resize: vertical;
+}
+
+button {
+    margin-top: .5rem;
+    padding: .5rem 1rem;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    transition: opacity .3s, background .3s;
+}
+button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+#themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: 1rem;
+}
+
+#themes button {
+    padding: .25rem .5rem;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+    background: rgba(255,255,255,0.8);
+    cursor: pointer;
+}
+
+#course-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#course-cards .flashcard {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+#course-cards button {
+    margin: .25rem;
+    padding: .25rem .5rem;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+}
+
+.flashcard {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    perspective: 1000px;
+}
+
+.flashcard .inner {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.flashcard.flip .inner {
+    transform: rotateY(180deg);
+}
+
+.flashcard .front, .flashcard .back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: var(--radius);
+    padding: 1rem;
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+}
+
+.flashcard .back {
+    transform: rotateY(180deg);
+}
+.timer {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background: var(--accent);
+    color: white;
+    padding: .75rem 1rem;
+    border-radius: var(--radius);
+    font-weight: bold;
+}
+.draft {
+    margin-top: .5rem;
+    padding: .5rem;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+    background: rgba(255,255,255,0.8);
+}
+
+#due-cards .flashcard {
+    margin-bottom: 0.5rem;
+}
+
+#due-cards button {
+    margin: 0 .25rem;
+    padding: .25rem .5rem;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+}
+
+@media (min-width: 600px) {
+    #course-cards {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    #course-cards .flashcard {
+        flex: 1 1 calc(50% - 1rem);
+    }
+}
+
+/* modal for API key */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.5);
+}
+.modal.hidden {
+    display: none;
+}
+.modal-content {
+    background: var(--bg);
+    color: var(--fg);
+    padding: 2rem;
+    border-radius: var(--radius);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    max-width: 320px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+.modal-content input {
+    padding: .5rem;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+}
+.modal-content button {
+    align-self: flex-end;
+}

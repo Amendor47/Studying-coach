@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+cache/*
+!cache/llm/
+cache/llm/*
+!cache/llm/.gitkeep
+logs/*
+!logs/.gitkeep
+db.json
+build/
+dist/
+*.spec

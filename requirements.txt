@@ -1,0 +1,6 @@
+Flask
+openai
+python-docx
+pdfminer.six
+reportlab
+pyinstaller

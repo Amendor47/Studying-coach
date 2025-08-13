@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coach de Révision</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <header class="topbar">
+        <h1>Coach de Révision</h1>
+        <nav class="tabs" role="tablist">
+            <button class="tab active" data-tab="import" role="tab">Importer</button>
+            <button class="tab" data-tab="courses" role="tab">Fiches de cours</button>
+            <button class="tab" data-tab="flash" role="tab">Flashcards</button>
+            <button class="tab" data-tab="exercises" role="tab">Exercices</button>
+        </nav>
+    </header>
+
+    <main>
+        <section id="import" class="panel active" role="tabpanel">
+            <textarea id="source-text" placeholder="Colle ton texte ici..."></textarea>
+            <button id="analyze-btn">Analyser</button>
+            <button id="ai-btn" disabled>Améliorer via IA</button>
+            <div id="drafts"></div>
+        </section>
+        <section id="courses" class="panel" role="tabpanel">
+            <div id="themes"></div>
+            <div id="course-cards"></div>
+        </section>
+        <section id="flash" class="panel" role="tabpanel">
+            <div id="due-cards"></div>
+        </section>
+        <section id="exercises" class="panel" role="tabpanel">
+            <p>Aucun exercice pour l'instant.</p>
+        </section>
+    </main>
+
+    <div id="timer" class="timer" aria-live="polite">25:00</div>
+
+    <!-- API Key modal -->
+    <div id="key-modal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <h2>Clé API OpenAI</h2>
+            <p>Cette clé reste locale et n'est utilisée que si vous demandez l'IA.</p>
+            <input type="password" id="key-input" placeholder="sk-..." />
+            <button id="save-key">Enregistrer</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

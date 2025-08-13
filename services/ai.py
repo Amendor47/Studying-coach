@@ -91,7 +91,7 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
         provider = os.getenv("LLM_PROVIDER", "openai").lower()
 
         # --- Ollama provider ---
-        if provider == "ollama":
+        if provider == "ollama" or os.getenv("OLLAMA_HOST"):
             import requests
 
             host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")

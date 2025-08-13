@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
+from .chunker import normalize_text
+
 
 def extract_text_from_pdf(path: str) -> str:
     """Return text extracted from a PDF file."""
@@ -41,4 +43,6 @@ def extract_text(path: str, filename: str) -> str:
     func = EXTRACTORS.get(ext)
     if not func:
         raise ValueError(f"unsupported file type: {ext}")
-    return func(path)
+    raw = func(path)
+    # Normalize whitespace and Unicode to avoid downstream parsing issues.
+    return normalize_text(raw)

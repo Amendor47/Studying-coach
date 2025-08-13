@@ -71,18 +71,26 @@ def _keywords(text: str, top: int = 3) -> List[str]:
 
 
 def _extract_pairs(sections: List[Tuple[str, str]]) -> List[Tuple[str, str, str]]:
-    """Return list of (theme, term, definition) triples from parsed sections."""
+    """Return list of (theme, term, definition) triples from parsed sections.
+
+    The heuristic scans full paragraphs instead of isolated lines and relies on a
+    small dictionary of link words (``est``, ``signifie``, etc.). It skips pairs
+    where either side is too short, which previously produced nonsensical
+    flashcards.
+    """
 
     pairs: List[Tuple[str, str, str]] = []
+    connectors = [":", "-", " est ", " signifie ", " correspond à "]
     for theme, para in sections:
-        lines = [l.strip() for l in para.splitlines() if l.strip()]
-        for line in lines:
-            m = re.match(r"(.+?)[\s]*[:\-][\s]*(.+)", line)
-            if not m:
-                m = re.match(r"(.+?)\s+est\s+(.+)", line, re.IGNORECASE)
-            if m:
-                term, definition = m.groups()
-                pairs.append((theme, term.strip(), definition.strip()))
+        for sent in re.split(r"(?<=[.!?])\s+", para):
+            for conn in connectors:
+                if conn in sent:
+                    term, definition = sent.split(conn, 1)
+                    term = term.strip()
+                    definition = definition.strip()
+                    if len(term.split()) < 7 and len(definition.split()) >= 3:
+                        pairs.append((theme, term, definition))
+                    break
     return pairs
 
 

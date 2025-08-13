@@ -35,6 +35,11 @@ from services.ai_pipeline import get_ai_pipeline
 from dotenv import load_dotenv
 load_dotenv()
 
+# Set offline-friendly environment variables
+import os
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+os.environ['TRANSFORMERS_OFFLINE'] = '1'
+
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 app = Flask(
     __name__,
@@ -1125,4 +1130,30 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=int(os.getenv("PORT", 5000)), debug=True)
+    # Get port from environment or default to 5000
+    port = int(os.getenv("PORT", 5000))
+    
+    # Disable debug mode for production builds
+    debug_mode = os.getenv("FLASK_DEBUG", "1") == "1"
+    
+    print(f"[*] Démarrage de Studying Coach sur http://127.0.0.1:{port}")
+    print(f"[*] Mode debug: {'activé' if debug_mode else 'désactivé'}")
+    print(f"[*] Appuyez sur Ctrl+C pour arrêter le serveur")
+    
+    try:
+        app.run(
+            host="127.0.0.1", 
+            port=port, 
+            debug=debug_mode,
+            use_reloader=debug_mode,
+            threaded=True
+        )
+    except KeyboardInterrupt:
+        print("\n[*] Arrêt de Studying Coach...")
+    except OSError as e:
+        if "Address already in use" in str(e):
+            print(f"[!] Le port {port} est déjà utilisé. Essayez un autre port.")
+        else:
+            print(f"[!] Erreur réseau: {e}")
+    except Exception as e:
+        print(f"[!] Erreur inattendue: {e}")

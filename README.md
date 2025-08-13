@@ -1,152 +1,211 @@
-# Studying-coach
+# Studying Coach
 
-Prototype studying coach backend inspired by SPEC-2 (V2 "Réussite Max").
+Coach d'étude personnel avec intelligence artificielle et fonctionnalités hors-ligne.
 
-## ✨ Latest Features
+## ✨ Nouvelles Fonctionnalités
 
-### 🎯 Enhanced Drag & Drop
-- **Robust reordering**: Works on desktop and mobile with unified pointer/touch events
-- **Backend persistence**: Card order automatically saves via `/api/flashcards/reorder`
-- **Keyboard accessibility**: Ctrl+↑/↓ to reorder cards
-- **Visual feedback**: Smooth animations with drag handles and drop indicators
+### 🖥️ Application Desktop Standalone  
+- **Exécutable autonome**: Lance directement sur votre ordinateur sans navigateur requis
+- **Interface native**: Utilise pywebview pour une expérience desktop authentique
+- **Mode hors-ligne complet**: Fonctionne entièrement sans connexion internet
+- **Lancement automatique**: Scripts intelligents qui détectent et utilisent la meilleure méthode
 
-### 🤖 Local LLM Integration
-- **Ollama support** (default): Connect to local Ollama server
-- **Multiple providers**: GPT4All, llama.cpp, with automatic fallback
-- **Streaming responses**: Real-time text generation via Server-Sent Events
-- **Health monitoring**: `/api/health` endpoint reports LLM availability
+### 🌐 Mode Hors-ligne Renforcé
+- **Analyse sans IA**: Générateur de fiches robuste basé sur l'analyse de texte
+- **Pas de dépendances réseau**: Toutes les fonctionnalités de base disponibles offline
+- **Modèles locaux optionnels**: Support pour Ollama, GPT4All, et llama.cpp
+- **Basculement gracieux**: Fallback automatique quand l'IA n'est pas disponible
 
-### 🧠 AI Analysis Pipeline
-- **Enhanced analysis**: `/api/ai/analyze` with structured insights
-- **Study material generation**: `/api/ai/exercises` creates flashcards, quizzes, mnemonics
-- **RAG integration**: Context-aware responses using advanced retrieval
-- **Graceful fallbacks**: Works offline when LLM unavailable
+### 🎯 Interface Améliorée
+- **Drag & Drop avancé**: Réorganisation des cartes sur desktop et mobile
+- **Persistence automatique**: L'ordre des cartes est sauvegardé automatiquement
+- **Accessibilité clavier**: Ctrl+↑/↓ pour réorganiser les cartes
+- **Animations fluides**: Feedback visuel avec indicateurs de glisser-déposer
 
-## Features
-- Text normalization and chunking utilities (`services/chunker.py`).
-- Offline analyzer that segments chapters/paragraphed text, extracts mots-clés and
-  generates QA, QCM, Vrai/Faux and Cloze drafts (`services/analyzer.py`).
-- Strict validation and deduplication of items (`services/validate.py`).
-- Heuristics to decide if AI is needed (`services/heuristics.py`) with optional
-  "Améliorer via IA" button.
-- Cache and log wrapper for LLM calls (`services/ai.py`).
-- **NEW**: Unified local LLM adapter (`services/local_llm.py`) with Ollama, GPT4All, llama.cpp support
-- **NEW**: AI pipeline orchestration (`services/ai_pipeline.py`) for educational analysis
-- Configurable local LLM support: choose a provider via environment variables
-- Optional local semantic search feeding AI context (`services/rag.py`).
-- Optional web enrichment: DuckDuckGo search + scraping with caching
-  (`services/webfetch.py`) and UI button to add results as new fiches.
-- JSON store helpers (`services/store.py`).
-- Planner and SM‑2 scheduler (`services/planner.py`, `services/scheduler.py`) with
-  interleaving of due cards across themes and API routes to fetch and record reviews.
-- Export of validated fiches to CSV, PDF or DOCX (`/api/export/<fmt>`).
-- **NEW**: Enhanced drag & drop interface with reordering persistence
-- Cached LLM calls stored under `cache/` and traces written to `logs/`.
+### 🤖 IA Locale Intégrée
+- **Support multi-providers**: Ollama, GPT4All, llama.cpp avec fallback automatique
+- **Streaming en temps réel**: Génération de texte via Server-Sent Events
+- **Monitoring de santé**: Endpoint `/api/health` pour vérifier la disponibilité
+- **Configuration flexible**: Variables d'environnement pour personnalisation
 
-## 🚀 Quick start
+## 🚀 Démarrage Rapide
 
-### 🍎 macOS One-Click Setup (Recommended)
-For the best experience on macOS with Ollama:
+### 🖥️ Application Desktop (Recommandé)
 
-1. **Install Ollama**: Download from [ollama.com](https://ollama.com/download)
-2. **Pull required models**:
-   ```bash
-   ollama pull llama3:8b
-   ollama pull nomic-embed-text
-   ```
-3. **Start Ollama server**: `ollama serve` (runs in background)
-4. **Launch Studying Coach**: `./start-coach.command`
+**Option 1: Utiliser l'exécutable précompilé**
+1. Téléchargez `StudyCoach.exe` (Windows) ou `StudyCoach` (macOS/Linux)
+2. Double-cliquez pour lancer l'application
+3. L'interface s'ouvre automatiquement - pas de navigateur requis!
 
-That's it! The launcher script will:
-- ✅ Create a virtual environment and install dependencies
-- ✅ Auto-generate `settings-local.yaml` with Ollama defaults
-- ✅ Configure `.env` with proper Ollama settings (preserving existing keys)
-- ✅ Find a free port (5000-5010) to avoid conflicts
-- ✅ Open your browser automatically to the correct URL
-- ✅ Enable drag & drop without OCR dependencies (advanced analysis is opt-in)
-
-### Platform Launchers
-Use one of the launcher scripts at the project root depending on your platform:
-
-- **macOS (One-Click):** `./start-coach.command` ⭐ 
-- **Windows (CMD):** `Start-Coach.bat`
-- **Windows (PowerShell):** `Start-Coach.ps1`
-
-### Manual Setup
+**Option 2: Compiler depuis les sources**
 ```bash
-# Clone and install dependencies
+git clone <repo-url>
+cd Studying-coach
+pip install -r requirements-desktop.txt
+python build.py desktop
+./dist/StudyCoach  # ou StudyCoach.exe sur Windows
+```
+
+### 🌐 Mode Navigateur (Développement)
+
+**Lanceurs par plateforme:**
+- **Cross-platform:** `./start-coach.command` (Auto-détection OS)
+- **Windows:** `Start-Coach.bat`  
+- **macOS/Linux:** `./start-coach.command`
+
+**Démarrage manuel:**
+```bash
 git clone <repo-url>
 cd Studying-coach
 pip install -r requirements.txt
-
-# Set up local LLM (optional)
-cp .env.example .env
-# Edit .env to configure your LLM provider
-
-# Start the server
 python app.py
 ```
 
-**Note:** The macOS launcher uses intelligent port selection - if port 5000 is busy, it automatically tries 5001, 5002, etc. until it finds an available port.
+## 🛠️ Compilation
 
-## 🤖 Local AI Setup
+### Versions disponibles
 
-### Ollama (Default with macOS launcher)
-The macOS launcher automatically configures Ollama, but for manual setup:
-
-1. **Install Ollama**: Download from [ollama.com](https://ollama.com/download)
-2. **Pull models**: 
-   ```bash
-   ollama pull llama3:8b
-   ollama pull nomic-embed-text
-   ```
-3. **Configure** (auto-configured by launcher): Set in `.env`:
-   ```
-   LLM_PROVIDER=ollama
-   OLLAMA_HOST=http://127.0.0.1:11434
-   OLLAMA_MODEL=llama3:8b
-   ```
-
-### GPT4All Alternative
-1. **Install**: `pip install gpt4all`
-2. **Configure**: Set in `.env`:
-   ```
-   LLM_PROVIDER=gpt4all
-   GPT4ALL_MODEL=mistral-7b-instruct-v0.1.Q4_0.gguf
-   ```
-
-### llama.cpp Alternative
-1. **Install**: `pip install llama-cpp-python`
-2. **Download model**: Get a GGUF model file
-3. **Configure**: Set in `.env`:
-   ```
-   LLM_PROVIDER=llama_cpp
-   LLAMA_CPP_MODEL_PATH=/path/to/model.gguf
-   ```
-
-## 📚 Usage
-
-Importer un texte puis cliquez sur **Analyser** pour générer des fiches hors IA.
-Si la heuristique le suggère ou via le bouton **Améliorer via IA**, un appel à
-l'LLM local peut compléter les fiches. 
-
-### New AI Features
-- **Enhanced analysis**: Use `enhanced: true` in analysis requests for structured insights
-- **Exercise generation**: `/api/ai/exercises` creates diverse study materials
-- **Drag & drop reordering**: Rearrange flashcards with mouse/touch, order persists automatically
-- **Health monitoring**: Check `/api/health` to see LLM and system status
-
-Les fiches acceptées sont planifiées automatiquement et apparaissent ensuite dans l'onglet
-**Flashcards** pour les révisions espacées.
-
-## Standalone executables
-
-To bundle the coach as a single binary (`.exe` on Windows, Unix binary on macOS/Linux),
-install PyInstaller and run:
-
-```
+```bash
+# Compiler les deux versions
 python build.py
+
+# Version desktop uniquement  
+python build.py desktop
+
+# Version web uniquement
+python build.py web
 ```
 
-The resulting file appears in `dist/` as `coach.exe` (Windows) or `coach`
-(macOS/Linux). Launch it directly to start the server without Python.
+### Résultats de compilation
+- **StudyCoach** / **StudyCoach.exe**: Application desktop avec GUI native
+- **StudyCoach-Web** / **StudyCoach-Web.exe**: Version serveur web autonome
+
+## 🔧 Configuration
+
+### Mode Hors-ligne (par défaut)
+```bash
+# Variables automatiquement configurées
+SC_PROFILE=offline
+LLM_PROVIDER=offline  
+TRANSFORMERS_OFFLINE=1
+TOKENIZERS_PARALLELISM=false
+```
+
+### Mode IA Locale (Ollama)
+```bash
+# Installer Ollama: https://ollama.com/download
+ollama pull llama3:8b
+ollama pull nomic-embed-text
+ollama serve
+
+# Configuration
+LLM_PROVIDER=ollama
+OLLAMA_HOST=http://127.0.0.1:11434
+OLLAMA_MODEL=llama3:8b
+```
+
+### Mode IA Cloud (OpenAI)
+```bash
+OPENAI_API_KEY=your-key-here
+LLM_PROVIDER=openai
+```
+
+## 📚 Utilisation
+
+### Interface Desktop
+1. Lancez `StudyCoach` 
+2. L'interface s'ouvre dans une fenêtre native
+3. Importez vos documents (PDF, DOCX, TXT, Markdown)
+4. Cliquez **Analyser** pour générer des fiches automatiquement
+5. Utilisez **Améliorer via IA** si vous avez configuré un modèle local/cloud
+
+### Interface Web  
+1. Lancez `./start-coach.command` ou `Start-Coach.bat`
+2. L'application s'ouvre automatiquement dans votre navigateur
+3. Même fonctionnalités que l'interface desktop
+
+### Fonctionnalités Principales
+- **Import intelligent**: Analyse automatique de documents
+- **Génération de fiches**: QCM, Vrai/Faux, QA, Cloze tests
+- **Révisions espacées**: Algorithme SM-2 pour optimiser la mémorisation
+- **Recherche web**: Enrichissement via DuckDuckGo (optionnel)  
+- **Export**: CSV, PDF, DOCX
+- **Statistiques**: Suivi des performances et analytics
+
+## 🔄 Fonctionnalités Avancées
+
+### API REST Complète
+- `POST /api/upload`: Import de documents
+- `GET /api/due`: Cartes à réviser  
+- `POST /api/flashcards/reorder`: Réorganisation drag & drop
+- `POST /api/ai/generate`: Génération IA avec streaming
+- `GET /api/health`: Monitoring système et IA
+
+### Compatibilité Mobile
+- Interface responsive adaptée aux écrans tactiles
+- Support des gestes (glisser-déposer)
+- Retour haptique sur appareils compatibles
+
+### Sécurité et Performance
+- Headers de sécurité (CSP, XSS Protection)
+- Cache intelligent avec ETags
+- Compression automatique des assets
+- Service Worker pour fonctionnement hors-ligne
+
+## 🐞 Dépannage
+
+### L'application ne démarre pas
+```bash
+# Vérifier Python
+python3 --version
+
+# Réinstaller les dépendances
+pip install -r requirements.txt --force-reinstall
+
+# Nettoyer le cache
+rm -rf .venv __pycache__ cache
+```
+
+### Problèmes d'IA
+```bash
+# Vérifier la santé de l'IA
+curl http://127.0.0.1:5000/api/health
+
+# Mode debug pour diagnostics
+FLASK_DEBUG=1 python app.py
+```
+
+### Erreurs de port
+Les lanceurs détectent automatiquement un port libre (5000-5010). En cas de problème:
+```bash
+export PORT=5001  # ou autre port libre
+python app.py
+```
+
+## 📋 Pré-requis
+
+### Application Desktop
+- **Python 3.8+** (pour compilation depuis sources)
+- **Aucune dépendance** (pour les exécutables précompilés)
+
+### Mode Développement
+- **Python 3.8+**
+- **pip** 
+- **Connexion internet** (installation des dépendances uniquement)
+
+### IA Locale (Optionnel)
+- **Ollama**: Recommandé, plus facile à installer
+- **GPT4All**: Alternative avec modèles intégrés  
+- **llama.cpp**: Pour usage avancé
+
+## 🤝 Contributions
+
+Les contributions sont bienvenues! Domaines prioritaires:
+- Nouveaux formats d'import (PowerPoint, etc.)
+- Améliorations de l'interface desktop
+- Support de nouveaux providers IA
+- Tests et documentation
+
+## 📄 Licence
+
+Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.

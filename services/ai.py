@@ -59,6 +59,11 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
     Falls back to an empty result if the API is unavailable. The call is
     cached and logged with a reason for transparency.
     """
+    
+    # Check if we're in offline mode
+    if os.getenv("LLM_PROVIDER", "").lower() == "offline" or os.getenv("TRANSFORMERS_OFFLINE") == "1":
+        _log(f"offline_mode,{reason},{len(text)}")
+        return []
 
     system = (
         "Tu es un coach de révision expert utilisant des méthodes pédagogiques avancées. "
@@ -72,7 +77,14 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
         "en incluant des métadonnées pédagogiques comme 'difficulty_level', 'cognitive_load', "
         "'learning_objectives', et 'pedagogical_method'."
     )
-    context = "\n\n".join(get_context(text, 5))
+    
+    # Try to get context, but don't fail if it's not available
+    try:
+        context = "\n\n".join(get_context(text, 5))
+    except Exception as e:
+        _log(f"context_error,{e}")
+        context = ""
+    
     user = text
     if context:
         user += "\n\nContexte:\n" + context
@@ -185,7 +197,14 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
         except Exception:
             return {"flashcards": [], "exercices": []}
 
-    data = cached_call(system, user, call_fn)
+    # Wrap the call with better error handling
+    try:
+        data = cached_call(system, user, call_fn)
+    except Exception as e:
+        _log(f"ai_analyze_error,{reason},{str(e)}")
+        # Return empty result if AI is not available
+        return []
+    
     _log(f"ai_analyze,{reason},{len(text)}")
     items: List[Dict] = []
     for fc in data.get("flashcards", []):

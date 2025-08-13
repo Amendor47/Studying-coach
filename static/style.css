@@ -210,6 +210,12 @@ button:hover:not(:disabled) {
     background: rgba(255,255,255,0.8);
 }
 
+.analysis-meta {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+}
+
 #due-cards .flashcard {
     margin-bottom: 0.5rem;
 }

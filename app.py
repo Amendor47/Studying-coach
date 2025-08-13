@@ -5,7 +5,7 @@ import os
 import sys
 
 from services.analyzer import analyze_offline
-from services.heuristics import ai_needed
+from services.heuristics import ai_needed, readability, density
 from services.store import load_db, save_db
 from typing import Dict
 from services.validate import validate_items
@@ -115,7 +115,8 @@ def offline_analyze():
     text = data.get("text", "")
     drafts = analyze_offline(text)
     need_ai = ai_needed(text, drafts)
-    return jsonify({"drafts": drafts, "need_ai": need_ai})
+    meta = {"readability": readability(text), "density": density(text, drafts)}
+    return jsonify({"drafts": drafts, "need_ai": need_ai, "meta": meta})
 
 
 @app.route("/api/ai/analyze", methods=["POST"])

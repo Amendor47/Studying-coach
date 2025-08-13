@@ -142,9 +142,15 @@ updateDisplay();
 const btn = document.getElementById('analyze-btn');
 const uploadBtn = document.getElementById('upload-btn');
 
-async function renderDrafts(list) {
+function renderDrafts(list, meta) {
   const drafts = document.getElementById('drafts');
   drafts.innerHTML = '';
+  if (meta) {
+    const info = document.createElement('div');
+    info.className = 'analysis-meta';
+    info.textContent = `Lisibilité ${(meta.readability * 100).toFixed(0)}% · Densité ${meta.density.toFixed(2)}`;
+    drafts.appendChild(info);
+  }
   list.forEach(d => {
     const div = document.createElement('div');
     div.className = 'draft';
@@ -178,7 +184,7 @@ btn.addEventListener('click', async () => {
     body: JSON.stringify({ text })
   });
   const data = await resp.json();
-  renderDrafts(data.drafts);
+  renderDrafts(data.drafts, data.meta);
 });
 
 uploadBtn.addEventListener('click', async () => {
@@ -205,7 +211,7 @@ aiBtn.addEventListener('click', async () => {
     body: JSON.stringify({ text, force: true, reason: 'user' })
   });
   const data = await resp.json();
-  renderDrafts(data.drafts);
+  renderDrafts(data.drafts, data.meta);
 });
 
 webSearchBtn?.addEventListener('click', async () => {

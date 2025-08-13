@@ -63,29 +63,38 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
         " listes 'flashcards' et 'exercices'."
     )
     user = text + "\nStrict JSON"
+    use_local = bool(os.getenv("LOCAL_LLM_MODEL"))
 
-    def call_fn(sys: str, usr: str) -> Dict[str, Any]:
-        try:
-            import openai  # type: ignore
-        except Exception:
-            return {"flashcards": [], "exercices": []}
+    if use_local:
+        from .local_llm import complete as local_complete
 
-        key = os.getenv("OPENAI_API_KEY")
-        if not key:
-            return {"flashcards": [], "exercices": []}
-        openai.api_key = key
-        resp = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": sys}, {"role": "user", "content": usr}],
-            temperature=0,
-        )
-        try:
-            return json.loads(resp["choices"][0]["message"]["content"])
-        except Exception:
-            return {"flashcards": [], "exercices": []}
+        def call_fn(sys: str, usr: str) -> Dict[str, Any]:
+            return local_complete(sys, usr)
+
+    else:
+
+        def call_fn(sys: str, usr: str) -> Dict[str, Any]:
+            try:
+                import openai  # type: ignore
+            except Exception:
+                return {"flashcards": [], "exercices": []}
+
+            key = os.getenv("OPENAI_API_KEY")
+            if not key:
+                return {"flashcards": [], "exercices": []}
+            openai.api_key = key
+            resp = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "system", "content": sys}, {"role": "user", "content": usr}],
+                temperature=0,
+            )
+            try:
+                return json.loads(resp["choices"][0]["message"]["content"])
+            except Exception:
+                return {"flashcards": [], "exercices": []}
 
     data = cached_call(system, user, call_fn)
-    _log(f"ai_analyze,{reason},{len(text)}")
+    _log(f"ai_analyze_{'local' if use_local else 'remote'},{reason},{len(text)}")
     items: List[Dict] = []
     for fc in data.get("flashcards", []):
         items.append({"id": f"ai{len(items)}", "kind": "card", "payload": fc})

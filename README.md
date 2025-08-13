@@ -10,6 +10,8 @@ Prototype studying coach backend inspired by SPEC-2 (V2 "Réussite Max").
 - Heuristics to decide if AI is needed (`services/heuristics.py`) with optional
   "Améliorer via IA" button.
 - Cache and log wrapper for LLM calls (`services/ai.py`).
+- Optional local LLM via `llama-cpp-python` when `LOCAL_LLM_MODEL` is set
+  (`services/local_llm.py`).
 - Optional local semantic search feeding AI context (`services/rag.py`).
 - Optional web enrichment: DuckDuckGo search + scraping with caching
   (`services/webfetch.py`) and UI button to add results as new fiches.
@@ -35,6 +37,9 @@ Importer un texte puis cliquez sur **Analyser** pour générer des fiches hors I
 Si la heuristique le suggère ou via le bouton **Améliorer via IA**, un appel à
 l'API OpenAI peut compléter les fiches. La première visite affiche un
 dialogue pour saisir la clé `OPENAI_API_KEY` stockée localement dans `.env`.
+Pour éviter tout appel réseau, installez `llama-cpp-python` et définissez
+`LOCAL_LLM_MODEL` vers un fichier modèle `.gguf`. Le coach utilisera alors
+un LLM interne à la place de l'API OpenAI.
 Les fiches acceptées
 sont planifiées automatiquement et apparaissent ensuite dans l'onglet
 **Flashcards** pour les révisions espacées.

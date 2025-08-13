@@ -387,6 +387,48 @@ def chat_route():
     return jsonify({"answer": answer})
 
 
+@app.route("/api/chat/stream", methods=["POST"])
+def chat_stream_route():
+    """Streaming chat endpoint with Server-Sent Events"""
+    data = request.get_json(force=True)
+    msg = data.get("message", "")
+    
+    def generate():
+        try:
+            # For now, simulate streaming by chunking the response
+            answer = teacher.chat(msg)
+            words = answer.split()
+            
+            # Stream words in small chunks for better UX
+            chunk_size = 3
+            for i in range(0, len(words), chunk_size):
+                chunk = ' '.join(words[i:i + chunk_size])
+                if i + chunk_size < len(words):
+                    chunk += ' '
+                
+                yield f"data: {{'content': '{chunk}', 'done': false}}\n\n"
+                
+                # Small delay between chunks for realistic streaming effect
+                import time
+                time.sleep(0.1)
+            
+            # Signal completion
+            yield f"data: {{'content': '', 'done': true}}\n\n"
+            
+        except Exception as e:
+            yield f"data: {{'error': 'Erreur lors de la génération: {str(e)}', 'done': true}}\n\n"
+    
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'  # Disable nginx buffering
+        }
+    )
+
+
 @app.route("/")
 def index():
     return render_template("index.html")

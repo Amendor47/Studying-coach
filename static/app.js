@@ -11,7 +11,9 @@ const webResults = document.getElementById('web-results');
 const chatInput = document.getElementById('chat-input');
 const chatSend = document.getElementById('chat-send');
 const chatLog = document.getElementById('chat-log');
+const chatStatus = document.getElementById('chat-status');
 let sessionLimit = null;
+let currentChatController = null;
 
 function toast(msg) {
   const t = document.createElement('div');
@@ -73,8 +75,8 @@ function fmt(sec) {
 }
 
 function updateDisplay() {
-  timerEl.textContent = fmt(remaining);
-  labelEl.textContent = mode === 'work' ? 'Travail' : 'Pause';
+  if (timerEl) timerEl.textContent = fmt(remaining);
+  if (labelEl) labelEl.textContent = mode === 'work' ? 'Travail' : 'Pause';
 }
 
 function switchMode(next) {
@@ -115,7 +117,7 @@ function startTick() {
   }, 1000);
 }
 
-startBtn.addEventListener('click', () => {
+startBtn?.addEventListener('click', () => {
   stopTick();
   targetMinutes = parseInt(sessionSel.value || '25', 10);
   elapsedTotal = 0;
@@ -125,9 +127,9 @@ startBtn.addEventListener('click', () => {
   startTick();
 });
 
-pauseBtn.addEventListener('click', () => stopTick());
-resumeBtn.addEventListener('click', () => startTick());
-resetBtn.addEventListener('click', () => {
+pauseBtn?.addEventListener('click', () => stopTick());
+resumeBtn?.addEventListener('click', () => startTick());
+resetBtn?.addEventListener('click', () => {
   stopTick();
   elapsedTotal = 0;
   mode = 'work';
@@ -135,7 +137,7 @@ resetBtn.addEventListener('click', () => {
   updateDisplay();
 });
 
-sessionSel.addEventListener('change', () => {
+sessionSel?.addEventListener('change', () => {
   targetMinutes = parseInt(sessionSel.value || '25', 10);
 });
 
@@ -179,7 +181,7 @@ function renderDrafts(list, meta) {
   });
 }
 
-btn.addEventListener('click', async () => {
+btn?.addEventListener('click', async () => {
   const text = document.getElementById('source-text').value;
   const resp = await fetch('/api/offline/analyze', {
     method: 'POST',
@@ -190,23 +192,156 @@ btn.addEventListener('click', async () => {
   renderDrafts(data.drafts, data.meta);
 });
 
-uploadBtn.addEventListener('click', async () => {
-  const fileInput = document.getElementById('file-input');
-  const file = fileInput.files[0];
-  if (!file) return;
-  const form = new FormData();
-  form.append('file', file);
-  form.append('use_ai', document.getElementById('use-ai-upload').checked);
-  form.append('session_minutes', document.getElementById('session-minutes').value);
-  const resp = await fetch('/api/upload', { method: 'POST', body: form });
-  const data = await resp.json();
-  toast(`✅ ${data.saved} fiches ajoutées`);
-  sessionLimit = Math.min(Math.ceil((data.minutes || 0) / 1.5), data.due.length);
-  document.querySelector('.tab[data-tab="flash"]').click();
-  loadDueCards();
+// Enhanced file upload with drag-and-drop
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const uploadProgress = document.getElementById('upload-progress');
+const progressFill = document.getElementById('progress-fill');
+const progressText = document.getElementById('progress-text');
+
+let uploadAbortController = null;
+
+function showUploadProgress(show = true) {
+  if (!uploadProgress) return;
+  uploadProgress.classList.toggle('hidden', !show);
+}
+
+function updateUploadProgress(percent, text = 'Téléchargement...') {
+  if (progressFill) progressFill.style.width = `${percent}%`;
+  if (progressText) {
+    progressText.textContent = text;
+    progressText.className = `progress-text ${percent < 100 ? 'loading' : ''}`;
+  }
+}
+
+function resetUploadState() {
+  showUploadProgress(false);
+  updateUploadProgress(0);
+  if (dropZone) dropZone.classList.remove('dragover');
+  if (uploadAbortController) {
+    uploadAbortController.abort();
+    uploadAbortController = null;
+  }
+}
+
+function validateFile(file) {
+  const maxSize = 50 * 1024 * 1024; // 50MB
+  const allowedTypes = [
+    'text/plain',
+    'text/markdown',
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword'
+  ];
+  
+  if (file.size > maxSize) {
+    throw new Error('Le fichier est trop volumineux (max 50MB)');
+  }
+  
+  if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|pdf|docx|doc)$/i)) {
+    throw new Error('Type de fichier non supporté. Utilisez PDF, DOCX, TXT ou Markdown');
+  }
+  
+  return true;
+}
+
+async function uploadFile(file) {
+  try {
+    validateFile(file);
+    
+    uploadAbortController = new AbortController();
+    showUploadProgress(true);
+    updateUploadProgress(0, 'Préparation...');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('use_ai', document.getElementById('use-ai-upload')?.checked ? 'true' : 'false');
+    formData.append('session_minutes', document.getElementById('session-minutes')?.value || '25');
+    
+    updateUploadProgress(25, 'Téléchargement...');
+    
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+      signal: uploadAbortController.signal
+    });
+    
+    updateUploadProgress(75, 'Traitement...');
+    
+    if (!response.ok) {
+      throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    updateUploadProgress(100, 'Terminé!');
+    
+    setTimeout(() => {
+      resetUploadState();
+      toast(`✅ ${result.saved} éléments ajoutés depuis "${file.name}"`);
+    }, 1000);
+    
+    // Refresh relevant data
+    loadThemes();
+    loadDueCards();
+    
+  } catch (error) {
+    resetUploadState();
+    
+    if (error.name === 'AbortError') {
+      toast('❌ Téléchargement annulé');
+    } else {
+      toast(`❌ Erreur: ${error.message}`);
+      console.error('Upload error:', error);
+    }
+  }
+}
+
+// Drag and drop event handlers
+if (dropZone) {
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    if (!dropZone.contains(e.relatedTarget)) {
+      dropZone.classList.remove('dragover');
+    }
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      uploadFile(files[0]);
+    }
+  });
+}
+
+// File input change handler
+if (fileInput) {
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      uploadFile(file);
+    }
+  });
+}
+
+// Update the existing upload button handler
+uploadBtn?.addEventListener('click', async () => {
+  const file = fileInput?.files[0];
+  if (!file) {
+    fileInput?.click(); // Open file dialog if no file selected
+    return;
+  }
+  uploadFile(file);
 });
 
-aiBtn.addEventListener('click', async () => {
+aiBtn?.addEventListener('click', async () => {
   const text = document.getElementById('source-text').value;
   const resp = await fetch('/api/ai/analyze', {
     method: 'POST',
@@ -470,25 +605,144 @@ async function reviewCard(id, quality) {
   loadDueCards();
 }
 
-chatSend?.addEventListener('click', async () => {
-  const msg = (chatInput.value || '').trim();
-  if (!msg) return;
-  const divU = document.createElement('div');
-  divU.className = 'chat-user';
-  divU.textContent = msg;
-  chatLog.appendChild(divU);
+// Enhanced chat functionality with streaming support
+function createChatMessage(content, className) {
+  const div = document.createElement('div');
+  div.className = className;
+  div.innerHTML = formatChatMessage(content);
+  return div;
+}
+
+function formatChatMessage(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+function showChatStatus(message, isLoading = false) {
+  if (!chatStatus) return;
+  chatStatus.textContent = message;
+  chatStatus.className = `chat-status ${isLoading ? 'loading' : ''}`;
+  chatStatus.classList.remove('hidden');
+}
+
+function hideChatStatus() {
+  if (!chatStatus) return;
+  chatStatus.classList.add('hidden');
+}
+
+function setChatInputState(enabled) {
+  if (chatInput) chatInput.disabled = !enabled;
+  if (chatSend) chatSend.disabled = !enabled;
+}
+
+async function sendChatMessage() {
+  const msg = (chatInput?.value || '').trim();
+  if (!msg || !chatInput || !chatLog) return;
+  
+  // Cancel any existing request
+  if (currentChatController) {
+    currentChatController.abort();
+  }
+  currentChatController = new AbortController();
+  
+  // Add user message
+  const userMsg = createChatMessage(msg, 'chat-user');
+  chatLog.appendChild(userMsg);
   chatInput.value = '';
-  const resp = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg })
-  });
-  const data = await resp.json();
-  const divB = document.createElement('div');
-  divB.className = 'chat-bot';
-  divB.textContent = data.answer;
-  chatLog.appendChild(divB);
+  
+  // Create bot response container
+  const botMsg = createChatMessage('', 'chat-bot streaming');
+  chatLog.appendChild(botMsg);
   chatLog.scrollTop = chatLog.scrollHeight;
+  
+  setChatInputState(false);
+  showChatStatus('Génération de la réponse...', true);
+  
+  try {
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+      signal: currentChatController.signal
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = '';
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.content) {
+              fullResponse += data.content;
+              botMsg.innerHTML = formatChatMessage(fullResponse);
+              chatLog.scrollTop = chatLog.scrollHeight;
+            }
+            if (data.done) {
+              botMsg.classList.remove('streaming');
+              hideChatStatus();
+              setChatInputState(true);
+              chatInput.focus();
+              return;
+            }
+          } catch (e) {
+            // Skip malformed JSON
+          }
+        }
+      }
+    }
+  } catch (error) {
+    botMsg.classList.remove('streaming');
+    
+    if (error.name === 'AbortError') {
+      botMsg.innerHTML = '<em>Requête annulée</em>';
+      showChatStatus('Requête annulée');
+    } else {
+      botMsg.innerHTML = '<em>Erreur lors de la génération de la réponse. Essayez à nouveau.</em>';
+      showChatStatus(`Erreur: ${error.message}`);
+      console.error('Chat error:', error);
+    }
+    
+    setTimeout(hideChatStatus, 3000);
+  } finally {
+    setChatInputState(true);
+    currentChatController = null;
+    if (chatInput) chatInput.focus();
+  }
+}
+
+// Event listeners for chat
+chatSend?.addEventListener('click', sendChatMessage);
+
+chatInput?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+});
+
+// Cancel current request on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && currentChatController) {
+    currentChatController.abort();
+    showChatStatus('Requête annulée');
+    setTimeout(hideChatStatus, 2000);
+  }
 });
 
 // --- API key handling ---
@@ -502,7 +756,7 @@ async function checkKey() {
   }
 }
 
-saveKey.addEventListener('click', async () => {
+saveKey?.addEventListener('click', async () => {
   const key = keyInput.value.trim();
   if (!key) return;
   await fetch('/api/config', {

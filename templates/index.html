@@ -28,6 +28,7 @@
       <button class="tab" data-tab="courses" role="tab">Cours</button>
       <button class="tab" data-tab="flash" role="tab">Révisions</button>
       <button class="tab" data-tab="exercises" role="tab">Exercices</button>
+      <button class="tab" data-tab="chat" role="tab">Assistant</button>
       <button class="tab" data-tab="web" role="tab">Web</button>
       <button class="tab" data-tab="settings" role="tab">Paramètres</button>
     </nav>
@@ -56,10 +57,26 @@
 
       <div class="card-grid">
         <div class="card">
-          <label class="file">
-            <input type="file" id="file-input" accept=".txt,.md,.pdf,.docx" />
-            <span>Glisser-déposer ou cliquer pour choisir un fichier</span>
-          </label>
+          <div id="drop-zone" class="drop-zone">
+            <label class="file">
+              <input type="file" id="file-input" accept=".txt,.md,.pdf,.docx" />
+              <div class="drop-content">
+                <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7,10 12,15 17,10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span class="drop-text">Glisser-déposer ou cliquer pour choisir un fichier</span>
+                <span class="drop-hint">PDF, DOCX, TXT ou Markdown acceptés</span>
+              </div>
+            </label>
+            <div id="upload-progress" class="upload-progress hidden">
+              <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+              </div>
+              <span id="progress-text" class="progress-text">Téléchargement...</span>
+            </div>
+          </div>
 
           <div class="row">
             <select id="session-minutes" class="select">
@@ -129,6 +146,29 @@
           <button id="web-search" class="btn btn-primary">Rechercher</button>
         </div>
         <div id="web-results" class="stack-sm"></div>
+      </div>
+    </section>
+
+    <!-- CHAT ASSISTANT -->
+    <section id="chat" class="panel" role="tabpanel">
+      <div class="panel-head">
+        <h2>Assistant IA</h2>
+        <p class="muted">Pose tes questions sur tes cours et obtiens des réponses personnalisées.</p>
+      </div>
+      <div class="chat-container">
+        <div id="chat-log" class="chat-log" role="log" aria-live="polite"></div>
+        <div class="chat-input-area">
+          <div class="chat-input-wrapper">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Pose ta question..." />
+            <button id="chat-send" class="chat-send" aria-label="Envoyer message">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m22 2-7 20-4-9-9-4z"/>
+                <path d="M22 2 11 13"/>
+              </svg>
+            </button>
+          </div>
+          <div id="chat-status" class="chat-status hidden" aria-live="polite"></div>
+        </div>
       </div>
     </section>
 

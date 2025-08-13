@@ -45,14 +45,34 @@ Prototype studying coach backend inspired by SPEC-2 (V2 "Réussite Max").
 
 ## 🚀 Quick start
 
-### Option 1: Platform Launchers
+### 🍎 macOS One-Click Setup (Recommended)
+For the best experience on macOS with Ollama:
+
+1. **Install Ollama**: Download from [ollama.com](https://ollama.com/download)
+2. **Pull required models**:
+   ```bash
+   ollama pull llama3:8b
+   ollama pull nomic-embed-text
+   ```
+3. **Start Ollama server**: `ollama serve` (runs in background)
+4. **Launch Studying Coach**: `./start-coach.command`
+
+That's it! The launcher script will:
+- ✅ Create a virtual environment and install dependencies
+- ✅ Auto-generate `settings-local.yaml` with Ollama defaults
+- ✅ Configure `.env` with proper Ollama settings (preserving existing keys)
+- ✅ Find a free port (5000-5010) to avoid conflicts
+- ✅ Open your browser automatically to the correct URL
+- ✅ Enable drag & drop without OCR dependencies (advanced analysis is opt-in)
+
+### Platform Launchers
 Use one of the launcher scripts at the project root depending on your platform:
 
+- **macOS (One-Click):** `./start-coach.command` ⭐ 
 - **Windows (CMD):** `Start-Coach.bat`
 - **Windows (PowerShell):** `Start-Coach.ps1`
-- **macOS:** `./start-coach.command`
 
-### Option 2: Manual Setup
+### Manual Setup
 ```bash
 # Clone and install dependencies
 git clone <repo-url>
@@ -67,19 +87,24 @@ cp .env.example .env
 python app.py
 ```
 
-Each script creates a virtual environment, installs dependencies and runs the Flask server.
-Once démarré, ouvrez `http://127.0.0.1:5000` pour accéder à l'interface.
+**Note:** The macOS launcher uses intelligent port selection - if port 5000 is busy, it automatically tries 5001, 5002, etc. until it finds an available port.
 
 ## 🤖 Local AI Setup
 
-### Ollama (Recommended)
+### Ollama (Default with macOS launcher)
+The macOS launcher automatically configures Ollama, but for manual setup:
+
 1. **Install Ollama**: Download from [ollama.com](https://ollama.com/download)
-2. **Pull a model**: `ollama pull llama3.1:8b`
-3. **Configure**: Set in `.env`:
+2. **Pull models**: 
+   ```bash
+   ollama pull llama3:8b
+   ollama pull nomic-embed-text
+   ```
+3. **Configure** (auto-configured by launcher): Set in `.env`:
    ```
    LLM_PROVIDER=ollama
    OLLAMA_HOST=http://127.0.0.1:11434
-   OLLAMA_MODEL=llama3.1:8b
+   OLLAMA_MODEL=llama3:8b
    ```
 
 ### GPT4All Alternative

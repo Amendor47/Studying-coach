@@ -81,13 +81,47 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
     def call_fn(sys: str, usr: str) -> Dict[str, Any]:
         """Perform the actual LLM API call.
 
-        Supports OpenAI (default) and AnythingLLM servers. Provider is chosen via
+        Supports Ollama, OpenAI, and AnythingLLM servers. Provider is chosen via
         environment variables:
 
+        - LLM_PROVIDER=ollama and OLLAMA_HOST (default: http://127.0.0.1:11434)
         - LLM_PROVIDER=anythingllm and ANYTHINGLLM_BASE (url)
         - optional ANYTHINGLLM_TOKEN for auth header
         """
         provider = os.getenv("LLM_PROVIDER", "openai").lower()
+
+        # --- Ollama provider ---
+        if provider == "ollama":
+            import requests
+
+            host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+            model = os.getenv("OLLAMA_MODEL", "llama3:8b")
+            messages = [
+                {"role": "system", "content": sys},
+                {"role": "user", "content": usr},
+            ]
+            payload = {
+                "model": model,
+                "messages": messages,
+                "stream": False
+            }
+            try:
+                r = requests.post(
+                    f"{host.rstrip('/')}/api/chat",
+                    json=payload,
+                    timeout=int(os.getenv("OLLAMA_TIMEOUT", "60")),
+                )
+                r.raise_for_status()
+                data = r.json()
+                content = data.get("message", {}).get("content", "{}")
+                try:
+                    return json.loads(content)
+                except json.JSONDecodeError:
+                    # If response is not JSON, return empty structure
+                    return {"flashcards": [], "exercices": []}
+            except Exception as e:
+                _log(f"ollama_error,{str(e)}")
+                return {"flashcards": [], "exercices": []}
 
         # --- AnythingLLM provider ---
         if provider == "anythingllm" or os.getenv("ANYTHINGLLM_BASE"):

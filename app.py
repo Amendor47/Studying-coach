@@ -99,7 +99,7 @@ def upload_file():
     if not uploaded:
         return jsonify({"error": "no file"}), 400
     use_ai = request.form.get("use_ai", "false").lower() == "true"
-    use_advanced_analysis = request.form.get("use_advanced", "true").lower() == "true"
+    use_advanced_analysis = request.form.get("use_advanced", "false").lower() == "true"
     minutes = int(request.form.get("session_minutes", 0))
     from datetime import date
     from services.tempfiles import safe_save_upload, safe_unlink
@@ -1125,4 +1125,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="127.0.0.1", port=int(os.getenv("PORT", 5000)), debug=True)

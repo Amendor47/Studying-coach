@@ -1,2 +1,6 @@
-provider: mock
-model: dummy
+provider: ollama
+model: llama3:8b
+embedding_model: nomic-embed-text
+top_k: 5
+timeout_s: 60
+temperature: 0.1

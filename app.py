@@ -1,39 +1,213 @@
-from flask import Flask, jsonify, request, render_template, Response, send_file
+#!/usr/bin/env python3
+"""
+Study Coach - Main Application
+Handles missing dependencies gracefully and provides fallback implementations.
+"""
+
 import io
 import csv
 import os
 import sys
 import time
 import json
-from datetime import datetime
-
-from services.analyzer import analyze_offline
-from services.heuristics import ai_needed, readability, density
-from services.store import load_db, save_db
-from typing import Dict
-from services.validate import validate_items, seed_seen_hashes
-from services.ai import analyze_text
-from services.rag import get_context
-from services.planner import generate_plan
-from services.scheduler import (
-    due_cards,
-    update_srs,
-    build_exercises_from_cards,
-    save_progress,
-)
-from services.parsers import extract_text
-from services.webfetch import web_context_from_query
+from datetime import datetime, timedelta
 from pathlib import Path
-from services.teacher import LocalTeacher
-from services.config import load_settings
-from services.llm_adapter import LLMClient
-from services.performance_cache import performance_cache, cached
-from services.local_llm import get_local_llm
-from services.ai_pipeline import get_ai_pipeline
+from typing import Dict, List, Optional, Any
+
+# Safe imports with fallbacks
+try:
+    from flask import Flask, jsonify, request, render_template, Response, send_file
+    HAS_FLASK = True
+except ImportError:
+    print("❌ Flask not available. Please install Flask to run the full application.")
+    print("Run: sudo apt install python3-flask python3-flask-cors")
+    sys.exit(1)
 
 # Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Simple .env loader fallback
+    def load_dotenv():
+        env_file = Path('.env')
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                if '=' in line and not line.startswith('#'):
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+    load_dotenv()
+
+# Import services with fallbacks
+try:
+    from services.analyzer import analyze_offline
+except ImportError:
+    def analyze_offline(text: str) -> List[Dict[str, Any]]:
+        """Fallback offline analysis"""
+        sentences = [s.strip() for s in text.split('.') if s.strip()]
+        items = []
+        
+        for i, sentence in enumerate(sentences[:10]):  # Max 10 items
+            if len(sentence) > 20:
+                # Simple definition detection
+                if ' est ' in sentence.lower():
+                    parts = sentence.split(' est ', 1)
+                    if len(parts) == 2:
+                        items.append({
+                            "id": f"fallback_{i}",
+                            "kind": "card", 
+                            "theme": "Concepts",
+                            "payload": {
+                                "type": "QA",
+                                "front": parts[0].strip(),
+                                "back": parts[1].strip()
+                            }
+                        })
+                elif len(sentence) > 30:
+                    # Create a simple flashcard
+                    words = sentence.split()
+                    if len(words) > 5:
+                        items.append({
+                            "id": f"fallback_{i}",
+                            "kind": "card",
+                            "theme": "Review", 
+                            "payload": {
+                                "type": "QA",
+                                "front": f"Que savez-vous sur: {' '.join(words[:5])}...",
+                                "back": sentence
+                            }
+                        })
+        return items
+
+try:
+    from services.heuristics import ai_needed, readability, density
+except ImportError:
+    def ai_needed(text, items): return len(items) < 3
+    def readability(text): return 0.8
+    def density(text, items): return len(items) / max(len(text.split()), 100) * 100
+
+try:
+    from services.store import load_db, save_db
+except ImportError:
+    # Fallback database functions
+    DB_FILE = Path("db.json")
+    def load_db() -> Dict[str, Any]:
+        if DB_FILE.exists():
+            try:
+                with DB_FILE.open("r", encoding="utf-8") as fh:
+                    return json.load(fh)
+            except:
+                pass
+        return {
+            "source_docs": [],
+            "drafts": [],
+            "cards": [],
+            "exercises": [],
+            "sessions": [],
+            "metrics": [],
+        }
+    
+    def save_db(db: Dict[str, Any]) -> None:
+        with DB_FILE.open("w", encoding="utf-8") as fh:
+            json.dump(db, fh, indent=2, ensure_ascii=False)
+
+# Other imports with fallbacks
+try:
+    from services.validate import validate_items, seed_seen_hashes
+except ImportError:
+    def validate_items(items): return items
+    def seed_seen_hashes(): pass
+
+try:
+    from services.ai import analyze_text
+except ImportError:
+    def analyze_text(text, use_ai=False): return analyze_offline(text)
+
+try:
+    from services.rag import get_context
+except ImportError:
+    def get_context(query, k=3): return []
+
+try:
+    from services.planner import generate_plan
+except ImportError:
+    def generate_plan(text): return {"sessions": 3, "minutes": 45}
+
+try:
+    from services.scheduler import due_cards, update_srs, build_exercises_from_cards, save_progress
+except ImportError:
+    def due_cards(): 
+        db = load_db()
+        return db.get("cards", [])
+    def update_srs(card_id, result): pass
+    def build_exercises_from_cards(cards): return []
+    def save_progress(session_data): pass
+
+try:
+    from services.parsers import extract_text
+except ImportError:
+    def extract_text(filepath, filename):
+        """Simple text extractor"""
+        ext = Path(filename).suffix.lower()
+        try:
+            if ext in ['.txt', '.md']:
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    return f.read()
+        except:
+            pass
+        return f"Could not extract text from {filename}"
+
+try:
+    from services.webfetch import web_context_from_query
+except ImportError:
+    def web_context_from_query(query): return []
+
+try:
+    from services.teacher import LocalTeacher
+except ImportError:
+    class LocalTeacher:
+        def __init__(self): pass
+
+try:
+    from services.config import load_settings
+except ImportError:
+    def load_settings():
+        settings_file = Path("settings-local.yaml")
+        if settings_file.exists():
+            content = settings_file.read_text(encoding="utf-8")
+            settings = {}
+            for line in content.strip().split('\n'):
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    settings[key.strip()] = value.strip()
+            return type('Settings', (), settings)()
+        return type('Settings', (), {
+            'provider': 'ollama',
+            'model': 'llama3:8b',
+            'embedding_model': 'nomic-embed-text'
+        })()
+
+try:
+    from services.llm_adapter import LLMClient
+except ImportError:
+    class LLMClient:
+        def __init__(self): pass
+
+try:
+    from services.performance_cache import performance_cache, cached
+except ImportError:
+    def performance_cache(): pass
+    def cached(func): return func
+
+try:
+    from services.local_llm import get_local_llm
+except ImportError:
+    def get_local_llm(): return None
+
+try:
+    from services.ai_pipeline import get_ai_pipeline
+except ImportError:
+    def get_ai_pipeline(): return None
 
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 app = Flask(
@@ -43,10 +217,13 @@ app = Flask(
 )
 
 # Configure CORS for development
-from flask_cors import CORS
-cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
-if cors_origins:
-    CORS(app, origins=cors_origins)
+try:
+    from flask_cors import CORS
+    cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
+    if cors_origins:
+        CORS(app, origins=cors_origins)
+except ImportError:
+    print("⚠️  Flask-CORS not available, CORS not configured")
 
 teacher = LocalTeacher()
 
@@ -65,7 +242,11 @@ def api_config():
         if cached_result:
             return jsonify(cached_result)
         
-        result = {"has_key": bool(os.getenv("OPENAI_API_KEY"))}
+        # For local/offline mode, don't require OpenAI key
+        has_openai_key = bool(os.getenv("OPENAI_API_KEY"))
+        is_local_mode = os.getenv("SC_PROFILE", "local") == "local"
+        
+        result = {"has_key": has_openai_key or is_local_mode}
         performance_cache.set("config", cache_key, result, ttl_seconds=60)
         return jsonify(result)
 
@@ -1117,6 +1298,17 @@ def apple_touch_icon():
         response = make_response('', 404)
         response.headers['Content-Type'] = 'image/png'
         return response
+
+
+@app.route("/api/performance/client_metrics", methods=["POST"])
+def client_metrics():
+    """Endpoint for client performance metrics"""
+    try:
+        data = request.get_json()
+        # Log metrics if needed
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/")

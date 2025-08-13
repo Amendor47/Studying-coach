@@ -10,6 +10,9 @@ Prototype studying coach backend inspired by SPEC-2 (V2 "Réussite Max").
 - Heuristics to decide if AI is needed (`services/heuristics.py`) with optional
   "Améliorer via IA" button.
 - Cache and log wrapper for LLM calls (`services/ai.py`).
+- Optional AnythingLLM integration: set `LLM_PROVIDER=anythingllm` and
+  point `ANYTHINGLLM_BASE` to a running instance to use its `/v1/chat/completions`
+  API instead of OpenAI.
 - Optional local semantic search feeding AI context (`services/rag.py`).
 - Optional web enrichment: DuckDuckGo search + scraping with caching
   (`services/webfetch.py`) and UI button to add results as new fiches.

@@ -65,7 +65,47 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
     user = text + "\nStrict JSON"
 
     def call_fn(sys: str, usr: str) -> Dict[str, Any]:
-        """Perform the actual OpenAI API call using the modern client."""
+        """Perform the actual LLM API call.
+
+        Supports OpenAI (default) and AnythingLLM servers. Provider is chosen via
+        environment variables:
+
+        - LLM_PROVIDER=anythingllm and ANYTHINGLLM_BASE (url)
+        - optional ANYTHINGLLM_TOKEN for auth header
+        """
+        provider = os.getenv("LLM_PROVIDER", "openai").lower()
+
+        # --- AnythingLLM provider ---
+        if provider == "anythingllm" or os.getenv("ANYTHINGLLM_BASE"):
+            import requests
+
+            base = os.getenv("ANYTHINGLLM_BASE", "http://localhost:3001")
+            model = os.getenv("ANYTHINGLLM_MODEL", "gpt-3.5-turbo")
+            token = os.getenv("ANYTHINGLLM_TOKEN")
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": sys},
+                    {"role": "user", "content": usr},
+                ],
+                "temperature": 0,
+            }
+            try:
+                r = requests.post(
+                    f"{base.rstrip('/')}/v1/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=30,
+                )
+                r.raise_for_status()
+                data = r.json()
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+                return json.loads(content)
+            except Exception:
+                return {"flashcards": [], "exercices": []}
+
+        # --- OpenAI provider (default) ---
         try:
             from openai import OpenAI  # type: ignore
             from openai.error import OpenAIError, RateLimitError as _RateLimit

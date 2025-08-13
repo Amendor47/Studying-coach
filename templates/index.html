@@ -14,6 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Stylesheets -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='design-system.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='advanced-flashcards.css') }}" />
   
@@ -205,14 +206,181 @@
       </div>
     </section>
 
-    <!-- PARAMÈTRES -->
+    <!-- PARAMÈTRES AVANCÉS -->
     <section id="settings" class="panel" role="tabpanel">
       <div class="panel-head">
-        <h2>Paramètres</h2>
-        <p class="muted">Profil IA, thème, taille du texte, etc.</p>
+        <h2 class="text-3xl font-bold mb-4">Paramètres Avancés</h2>
+        <p class="text-muted mb-6">Personnalisez votre expérience d'apprentissage avec des options avancées.</p>
       </div>
+      
+      <!-- Theme Settings -->
+      <div class="card mb-6">
+        <div class="card-header">
+          <h3 class="text-xl font-semibold">🎨 Thème et Apparence</h3>
+        </div>
+        <div class="card-body">
+          <div class="grid gap-6">
+            <div>
+              <label class="block text-sm font-medium mb-2">Thème</label>
+              <div class="flex gap-3">
+                <button class="btn btn-secondary theme-btn" data-theme="auto">
+                  🌓 Auto
+                </button>
+                <button class="btn btn-secondary theme-btn" data-theme="light">
+                  ☀️ Clair
+                </button>
+                <button class="btn btn-secondary theme-btn active" data-theme="dark">
+                  🌙 Sombre
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-2">Densité de l'interface</label>
+              <select id="ui-density" class="input">
+                <option value="compact">Compacte</option>
+                <option value="comfortable" selected>Confortable</option>
+                <option value="spacious">Spacieuse</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-2">Taille de police</label>
+              <input type="range" id="font-size" class="w-full" min="14" max="20" value="16" />
+              <div class="flex justify-between text-xs text-muted mt-1">
+                <span>Petit</span>
+                <span>Moyen</span>
+                <span>Grand</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Accessibility Settings -->
+      <div class="card mb-6">
+        <div class="card-header">
+          <h3 class="text-xl font-semibold">♿ Accessibilité</h3>
+        </div>
+        <div class="card-body">
+          <div class="space-y-4">
+            <label class="flex items-center gap-3">
+              <input type="checkbox" id="high-contrast" class="rounded" />
+              <span>Mode contraste élevé</span>
+            </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" id="reduce-motion" class="rounded" />
+              <span>Réduire les animations</span>
+            </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" id="dyslexia-font" class="rounded" />
+              <span>Police adaptée à la dyslexie</span>
+            </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" id="focus-indicators" class="rounded" checked />
+              <span>Indicateurs de focus renforcés</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Performance Settings -->
+      <div class="card mb-6">
+        <div class="card-header">
+          <h3 class="text-xl font-semibold">⚡ Performance</h3>
+        </div>
+        <div class="card-body">
+          <div id="performance-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-primary" id="cache-hit-ratio">--</div>
+              <div class="text-xs text-muted">Taux de cache</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-primary" id="avg-response-time">--</div>
+              <div class="text-xs text-muted">Temps réponse (ms)</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-primary" id="memory-usage">--</div>
+              <div class="text-xs text-muted">Mémoire (MB)</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-primary" id="performance-score">--</div>
+              <div class="text-xs text-muted">Score global</div>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <label class="flex items-center gap-3">
+              <input type="checkbox" id="enable-caching" class="rounded" checked />
+              <span>Cache intelligent activé</span>
+            </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" id="preload-resources" class="rounded" checked />
+              <span>Préchargement des ressources</span>
+            </label>
+            <div class="flex gap-3 mt-4">
+              <button id="clear-cache-btn" class="btn btn-secondary">
+                🗑️ Vider le cache
+              </button>
+              <button id="optimize-performance-btn" class="btn btn-primary">
+                🚀 Optimiser
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Advanced Learning Settings -->
       <div class="card">
-        <p>Interface prête. Branche tes options ici si besoin.</p>
+        <div class="card-header">
+          <h3 class="text-xl font-semibold">🧠 Apprentissage Intelligent</h3>
+        </div>
+        <div class="card-body">
+          <div class="space-y-6">
+            <div>
+              <label class="block text-sm font-medium mb-2">Algorithme de révision</label>
+              <select id="srs-algorithm" class="input">
+                <option value="sm2">SM-2 (Classique)</option>
+                <option value="sm2-plus" selected>SM-2+ (Amélioré)</option>
+                <option value="fsrs">FSRS (Nouvelle génération)</option>
+                <option value="adaptive">Adaptatif (IA)</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-2">Méthode pédagogique préférée</label>
+              <select id="teaching-method" class="input">
+                <option value="adaptive" selected>Adaptatif</option>
+                <option value="socratic">Méthode Socratique</option>
+                <option value="scaffolding">Échafaudage</option>
+                <option value="active_recall">Rappel actif</option>
+                <option value="elaborative">Apprentissage élaboratif</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-2">
+                Durée de session optimale: <span id="session-duration-value">25</span> minutes
+              </label>
+              <input type="range" id="session-duration" class="w-full" min="5" max="60" value="25" />
+            </div>
+            
+            <div class="space-y-3">
+              <label class="flex items-center gap-3">
+                <input type="checkbox" id="adaptive-difficulty" class="rounded" checked />
+                <span>Difficulté adaptative</span>
+              </label>
+              <label class="flex items-center gap-3">
+                <input type="checkbox" id="spaced-repetition-plus" class="rounded" checked />
+                <span>Répétition espacée améliorée</span>
+              </label>
+              <label class="flex items-center gap-3">
+                <input type="checkbox" id="learning-analytics" class="rounded" checked />
+                <span>Analyse d'apprentissage avancée</span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -292,7 +460,23 @@
   </div>
 
   <!-- Scripts -->
+  <script src="{{ url_for('static', filename='performance-monitor.js') }}"></script>
   <script src="{{ url_for('static', filename='advanced-flashcards.js') }}"></script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/service-worker.js')
+          .then(registration => {
+            console.log('SW registered: ', registration);
+          })
+          .catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+  </script>
 </body>
 </html>

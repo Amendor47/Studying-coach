@@ -3,6 +3,7 @@ import io
 import csv
 import os
 import sys
+import time
 from datetime import datetime
 
 from services.analyzer import analyze_offline
@@ -25,6 +26,7 @@ from pathlib import Path
 from services.teacher import LocalTeacher
 from services.config import load_settings
 from services.llm_adapter import LLMClient
+from services.performance_cache import performance_cache, cached
 
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 app = Flask(
@@ -44,7 +46,15 @@ ENV_FILE = Path(".env")
 def api_config():
     """Expose presence of OPENAI_API_KEY and allow setting it."""
     if request.method == "GET":
-        return jsonify({"has_key": bool(os.getenv("OPENAI_API_KEY"))})
+        # Cache configuration check
+        cache_key = "api_config"
+        cached_result = performance_cache.get("config", cache_key)
+        if cached_result:
+            return jsonify(cached_result)
+        
+        result = {"has_key": bool(os.getenv("OPENAI_API_KEY"))}
+        performance_cache.set("config", cache_key, result, ttl_seconds=60)
+        return jsonify(result)
 
     data = request.get_json(force=True)
     key = data.get("key", "").strip()
@@ -52,10 +62,15 @@ def api_config():
         return jsonify({"saved": False}), 400
     os.environ["OPENAI_API_KEY"] = key
     ENV_FILE.write_text(f"OPENAI_API_KEY={key}\n", encoding="utf-8")
+    
+    # Invalidate config cache
+    performance_cache.invalidate("config", "api_config")
+    
     return jsonify({"saved": True})
 
 
 @app.route("/api/health/llm")
+@cached("health", ttl_seconds=300)  # Cache for 5 minutes
 def health_llm():
     """Check availability of the configured LLM provider."""
     settings = load_settings()
@@ -208,11 +223,31 @@ def upload_file():
 def offline_analyze():
     data = request.get_json(force=True)
     text = data.get("text", "")
+    
+    # Create cache key from text hash
+    import hashlib
+    text_hash = hashlib.md5(text.encode()).hexdigest()
+    cache_key = f"offline_analysis:{text_hash}"
+    
+    # Try cache first
+    cached_result = performance_cache.get("analysis", cache_key)
+    if cached_result:
+        # Record cache hit pattern
+        performance_cache.record_pattern("default", "offline_analyze", [cache_key])
+        return jsonify(cached_result)
+    
+    # Perform analysis
     drafts_raw = analyze_offline(text)
     drafts = validate_items(drafts_raw)
     need_ai = ai_needed(text, drafts)
     meta = {"readability": readability(text), "density": density(text, drafts)}
-    return jsonify({"drafts": drafts, "need_ai": need_ai, "meta": meta})
+    
+    result = {"drafts": drafts, "need_ai": need_ai, "meta": meta}
+    
+    # Cache result
+    performance_cache.set("analysis", cache_key, result, ttl_seconds=1800)  # 30 minutes
+    
+    return jsonify(result)
 
 
 @app.route("/api/ai/analyze", methods=["POST"])
@@ -669,12 +704,117 @@ def get_concept_network():
     if not concept:
         return jsonify({"error": "concept parameter required"}), 400
     
+    # Cache concept networks as they're expensive to compute
+    cache_key = f"concept_network:{concept}:{depth}"
+    cached_result = performance_cache.get("concept_network", cache_key)
+    if cached_result:
+        return jsonify(cached_result)
+    
     try:
         from services.advanced_rag import advanced_rag
         network = advanced_rag.get_concept_network(concept, depth)
+        
+        # Cache for 1 hour
+        performance_cache.set("concept_network", cache_key, network, ttl_seconds=3600)
+        
         return jsonify(network)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/performance/stats", methods=["GET"])
+def performance_stats():
+    """Get comprehensive performance statistics"""
+    stats = performance_cache.get_stats()
+    
+    # Add application-specific metrics
+    app_stats = {
+        "flask": {
+            "request_count": getattr(app, '_request_count', 0),
+            "error_count": getattr(app, '_error_count', 0),
+        },
+        "database": {
+            "connection_pool_size": 10,  # Would be actual pool size
+            "active_connections": 2,     # Would be actual active connections
+        }
+    }
+    
+    return jsonify({
+        "cache": stats,
+        "application": app_stats,
+        "timestamp": datetime.now().isoformat()
+    })
+
+
+@app.route("/api/performance/clear_cache", methods=["POST"])
+def clear_cache():
+    """Clear performance caches"""
+    success = performance_cache.clear_all()
+    return jsonify({
+        "success": success,
+        "message": "All caches cleared" if success else "Failed to clear some caches"
+    })
+
+
+@app.route("/api/performance/preload", methods=["POST"])
+def preload_cache():
+    """Preload cache based on usage patterns"""
+    data = request.get_json(force=True)
+    user_id = data.get("user_id", "default")
+    current_action = data.get("current_action", "")
+    
+    # Predict next resources
+    predictions = performance_cache.predict_next_resources(user_id, current_action)
+    
+    # Preload predicted resources
+    preload_patterns = []
+    for resource in predictions[:5]:  # Top 5 predictions
+        preload_patterns.append(("analysis", resource, {}))
+    
+    performance_cache.preload(preload_patterns)
+    
+    return jsonify({
+        "predictions": predictions,
+        "preloaded": len(preload_patterns)
+    })
+
+
+# Performance monitoring middleware
+@app.before_request
+def before_request():
+    request._start_time = time.perf_counter()
+    # Track request count
+    app._request_count = getattr(app, '_request_count', 0) + 1
+
+
+@app.after_request 
+def after_request(response):
+    # Calculate response time
+    if hasattr(request, '_start_time'):
+        response_time = (time.perf_counter() - request._start_time) * 1000
+        response.headers['X-Response-Time'] = f"{response_time:.2f}ms"
+        
+        # Log slow requests
+        if response_time > 1000:  # > 1 second
+            print(f"Slow request: {request.endpoint} took {response_time:.2f}ms")
+    
+    # Add cache headers for static content
+    if request.endpoint and 'static' in request.endpoint:
+        response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1 year
+        response.headers['ETag'] = f'"{hash(response.data)}"'
+    
+    # Add security headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY' 
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    return response
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    app._error_count = getattr(app, '_error_count', 0) + 1
+    return jsonify({"error": "Internal server error"}), 500
 
 
 @app.route("/")

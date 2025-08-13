@@ -787,8 +787,9 @@ def before_request():
     app._request_count = getattr(app, '_request_count', 0) + 1
 
 
-@app.after_request 
+@app.after_request
 def after_request(response):
+    """Safe after_request handler that prevents RuntimeError on static files."""
     # Calculate response time
     if hasattr(request, '_start_time'):
         response_time = (time.perf_counter() - request._start_time) * 1000
@@ -798,10 +799,32 @@ def after_request(response):
         if response_time > 1000:  # > 1 second
             print(f"Slow request: {request.endpoint} took {response_time:.2f}ms")
     
-    # Add cache headers for static content
-    if request.endpoint and 'static' in request.endpoint:
+    # Skip ETag generation for static files
+    if request.endpoint == 'static':
+        # Add cache headers for static content without accessing response.data
         response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1 year
-        response.headers['ETag'] = f'"{hash(response.data)}"'
+    else:
+        # Skip for streaming responses
+        if response.is_streamed:
+            pass
+        # Skip for file downloads and binary responses
+        elif response.mimetype and (
+            response.mimetype.startswith('image/') or 
+            response.mimetype.startswith('video/') or
+            response.mimetype.startswith('audio/') or
+            response.mimetype == 'application/octet-stream'
+        ):
+            pass
+        else:
+            # Only add ETag for regular responses with accessible data
+            try:
+                if hasattr(response, 'get_data'):
+                    data = response.get_data(as_text=False)
+                    if data:
+                        response.headers['ETag'] = f'"{hash(data)}"'
+            except (RuntimeError, AttributeError):
+                # Silently skip ETag generation if data is not accessible
+                pass
     
     # Add security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'

@@ -61,8 +61,16 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
     """
 
     system = (
-        "Tu es un coach de révision FR. Retourne uniquement un JSON avec les"
-        " listes 'flashcards' et 'exercices'."
+        "Tu es un coach de révision expert utilisant des méthodes pédagogiques avancées. "
+        "Analyse le contenu avec expertise pédagogique et adapte ta réponse selon le contexte d'apprentissage.\n\n"
+        "Principes pédagogiques à respecter:\n"
+        "- Scaffolding: construis progressivement les concepts complexes\n"
+        "- Active recall: crée des questions qui stimulent la récupération en mémoire\n" 
+        "- Spaced repetition: varie la difficulté pour optimiser la rétention\n"
+        "- Elaborative processing: aide à créer des liens avec les connaissances existantes\n\n"
+        "Retourne uniquement un JSON enrichi avec les listes 'flashcards' et 'exercices', "
+        "en incluant des métadonnées pédagogiques comme 'difficulty_level', 'cognitive_load', "
+        "'learning_objectives', et 'pedagogical_method'."
     )
     context = "\n\n".join(get_context(text, 5))
     user = text

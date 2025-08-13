@@ -668,7 +668,7 @@ class AdvancedFlashcardSystem {
         const order = this.cards.map(card => card.id || card.title || `card_${this.cards.indexOf(card)}`);
         
         // Send to backend
-        fetch('/api/flashcards/reorder', {
+        fetch(`${getBaseURL()}/api/flashcards/reorder`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -895,7 +895,7 @@ class AdvancedFlashcardSystem {
         };
         
         // Send to analytics API
-        fetch('/api/advanced/learning_interaction', {
+        fetch(`${getBaseURL()}/api/advanced/learning_interaction`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

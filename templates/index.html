@@ -459,6 +459,11 @@
     </div>
   </div>
 
+  <!-- Base URL and Error Handling -->
+  <script>window.__BASE_URL__ = "";</script>
+  <script src="{{ url_for('static', filename='baseurl.js') }}"></script>
+  <script src="{{ url_for('static', filename='ui_error_overlay.js') }}"></script>
+  
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='performance-monitor.js') }}"></script>
   <script src="{{ url_for('static', filename='advanced-flashcards.js') }}"></script>

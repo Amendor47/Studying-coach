@@ -145,6 +145,102 @@ updateDisplay();
 const btn = document.getElementById('analyze-btn');
 const uploadBtn = document.getElementById('upload-btn');
 
+// --- ROBUST DRAG & DROP FUNCTIONALITY ---
+(function setupDragAndDrop() {
+  const fileInput = document.getElementById('file-input');
+  const dropZone = fileInput.closest('.file') || fileInput.closest('.card') || document.body;
+  
+  let dragCounter = 0;
+
+  function showUploadState(state) {
+    const statusEl = dropZone.querySelector('span') || dropZone;
+    const originalText = 'Glisser-déposer ou cliquer pour choisir un fichier';
+    
+    switch(state) {
+      case 'dragenter':
+        statusEl.textContent = '📁 Déposez votre fichier ici';
+        dropZone.style.backgroundColor = 'rgba(0, 224, 184, 0.1)';
+        break;
+      case 'uploading':
+        statusEl.textContent = '⏳ Téléchargement en cours...';
+        dropZone.style.backgroundColor = 'rgba(255, 165, 0, 0.1)';
+        break;
+      case 'success':
+        statusEl.textContent = '✅ Fichier téléchargé avec succès';
+        dropZone.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+        setTimeout(() => {
+          statusEl.textContent = originalText;
+          dropZone.style.backgroundColor = '';
+        }, 3000);
+        break;
+      case 'error':
+        statusEl.textContent = '❌ Erreur lors du téléchargement';
+        dropZone.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+        setTimeout(() => {
+          statusEl.textContent = originalText;
+          dropZone.style.backgroundColor = '';
+        }, 3000);
+        break;
+      default:
+        statusEl.textContent = originalText;
+        dropZone.style.backgroundColor = '';
+    }
+  }
+
+  function handleFiles(files) {
+    if (files.length > 0) {
+      const file = files[0];
+      fileInput.files = files; // Set the files on the input
+      showUploadState('uploading');
+      
+      // Trigger upload automatically
+      setTimeout(() => {
+        if (uploadBtn) {
+          uploadBtn.click();
+        }
+      }, 100);
+    }
+  }
+
+  // Prevent default drag behaviors
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Highlight drop zone when item is dragged over it
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dragCounter++;
+      showUploadState('dragenter');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        showUploadState('default');
+      }
+    }, false);
+  });
+
+  // Handle dropped files
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    handleFiles(files);
+  }, false);
+
+  console.log('Drag & Drop initialized for', dropZone);
+})();
+
 function renderDrafts(list, meta) {
   const drafts = document.getElementById('drafts');
   drafts.innerHTML = '';
@@ -161,7 +257,7 @@ function renderDrafts(list, meta) {
     const accept = document.createElement('button');
     accept.textContent = 'Accepter';
     accept.onclick = async () => {
-      await fetch('/api/save', {
+      await fetch(`${getBaseURL()}/api/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: [d] })
@@ -221,7 +317,7 @@ webSearchBtn?.addEventListener('click', async () => {
   const q = (webQ.value || '').trim();
   if (!q) return;
   webResults.textContent = 'Recherche...';
-  const r = await fetch(`/api/web/search?q=${encodeURIComponent(q)}`);
+  const r = await fetch(`${getBaseURL()}/api/web/search?q=${encodeURIComponent(q)}`);
   const data = await r.json();
   webResults.innerHTML = '';
   data.results.forEach(res => {
@@ -234,7 +330,7 @@ webSearchBtn?.addEventListener('click', async () => {
   enrichBtn.textContent = 'Ajouter ces résultats à mes fiches';
   enrichBtn.onclick = async () => {
     enrichBtn.disabled = true;
-    const resp = await fetch('/api/web/enrich', {
+    const resp = await fetch(`${getBaseURL()}/api/web/enrich`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: q, use_ai: webAI.checked })
@@ -348,7 +444,7 @@ function renderCourseCards(theme, data) {
 }
 
 async function updateStatus(id, status) {
-  await fetch(`/api/card/${id}/status`, {
+  await fetch(`${getBaseURL()}/api/card/${id}/status`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status })
@@ -358,7 +454,7 @@ async function updateStatus(id, status) {
 // --- FLASHCARDS DUES ---
 
 async function loadDueCards() {
-  const resp = await fetch('/api/due');
+  const resp = await fetch(`${getBaseURL()}/api/due`);
   const data = await resp.json();
   let list = data.cards;
   if (sessionLimit) {
@@ -413,7 +509,7 @@ function renderDueCards(list) {
 }
 
 async function loadExercises() {
-  const resp = await fetch('/api/due');
+  const resp = await fetch(`${getBaseURL()}/api/due`);
   const data = await resp.json();
   renderExercises(data.exercises);
 }
@@ -462,7 +558,7 @@ function renderExercises(list, targetDiv) {
 }
 
 async function reviewCard(id, quality) {
-  await fetch(`/api/review/${id}`, {
+  await fetch(`${getBaseURL()}/api/review/${id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quality })
@@ -493,7 +589,7 @@ chatSend?.addEventListener('click', async () => {
 
 // --- API key handling ---
 async function checkKey() {
-  const resp = await fetch('/api/config');
+  const resp = await fetch(`${getBaseURL()}/api/config`);
   const data = await resp.json();
   if (!data.has_key) {
     keyModal.classList.remove('hidden');
@@ -505,7 +601,7 @@ async function checkKey() {
 saveKey.addEventListener('click', async () => {
   const key = keyInput.value.trim();
   if (!key) return;
-  await fetch('/api/config', {
+  await fetch(`${getBaseURL()}/api/config`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key })

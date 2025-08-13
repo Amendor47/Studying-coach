@@ -19,7 +19,7 @@ else
   source .venv/bin/activate
   pip install --upgrade pip --timeout=30 >/dev/null 2>&1 || echo "Warning: Could not upgrade pip"
   # Try minimal install first
-  pip install flask python-dotenv pyyaml requests --timeout=30 >/dev/null 2>&1 || {
+  pip install flask python-dotenv pyyaml requests flask-cors --timeout=30 >/dev/null 2>&1 || {
     echo "Warning: Could not install all packages. Attempting to use system packages."
     USE_SYSTEM=true
     deactivate

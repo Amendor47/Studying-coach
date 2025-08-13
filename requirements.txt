@@ -8,6 +8,16 @@ requests
 beautifulsoup4
 trafilatura
 pyyaml
+# LLM and AI dependencies
+python-dotenv
+flask-cors
+ollama
+# Optional LLM providers
+gpt4all>=2.0.0; python_version>="3.8"
+llama-cpp-python>=0.2.0; python_version>="3.8"
+# Embeddings and vector search (optional)
+sentence-transformers>=2.2.0; python_version>="3.8"
+faiss-cpu>=1.7.0; python_version>="3.8"
 # Advanced document analysis dependencies
 pillow>=9.0.0
 opencv-python>=4.5.0

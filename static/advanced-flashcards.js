@@ -13,6 +13,7 @@ class AdvancedFlashcardSystem {
             autoAdvanceDelay: 3000,
             enableKeyboard: true,
             enableHaptics: true,
+            enableDragReorder: true,
             ...options
         };
         
@@ -23,6 +24,8 @@ class AdvancedFlashcardSystem {
         this.touchStartX = 0;
         this.touchStartY = 0;
         this.isDragging = false;
+        this.dragStartIndex = -1;
+        this.dragOverIndex = -1;
         
         this.initializeEventListeners();
         this.loadSettings();
@@ -40,6 +43,11 @@ class AdvancedFlashcardSystem {
             document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
             document.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
         }
+        
+        // Pointer events for unified mouse/touch handling
+        document.addEventListener('pointerdown', this.handlePointerDown.bind(this));
+        document.addEventListener('pointermove', this.handlePointerMove.bind(this));
+        document.addEventListener('pointerup', this.handlePointerUp.bind(this));
         
         // Visibility change handling
         document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
@@ -537,6 +545,193 @@ class AdvancedFlashcardSystem {
         this.isDragging = false;
     }
     
+    // ===== POINTER EVENTS FOR UNIFIED MOUSE/TOUCH DRAG & DROP =====
+    
+    handlePointerDown(e) {
+        if (!this.options.enableDragReorder) return;
+        
+        const dragHandle = e.target.closest('.drag-handle');
+        if (!dragHandle) return;
+        
+        e.preventDefault();
+        
+        const cardElement = dragHandle.closest('.flashcard-item');
+        if (!cardElement) return;
+        
+        this.dragStartIndex = parseInt(cardElement.dataset.index);
+        this.isDragging = true;
+        
+        // Add dragging class for visual feedback
+        cardElement.classList.add('dragging');
+        document.body.classList.add('drag-active');
+        
+        // Store initial pointer position
+        this.pointerStartX = e.clientX;
+        this.pointerStartY = e.clientY;
+        
+        // Set up drag image (optional)
+        if (e.dataTransfer) {
+            const dragImage = cardElement.cloneNode(true);
+            dragImage.style.transform = 'rotate(5deg)';
+            dragImage.style.opacity = '0.8';
+            e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+        }
+    }
+    
+    handlePointerMove(e) {
+        if (!this.isDragging || !this.options.enableDragReorder) return;
+        
+        e.preventDefault();
+        
+        // Check if this is a significant drag (not just a tap)
+        const deltaX = Math.abs(e.clientX - this.pointerStartX);
+        const deltaY = Math.abs(e.clientY - this.pointerStartY);
+        
+        if (deltaX < 5 && deltaY < 5) return;
+        
+        // Find the element we're dragging over
+        const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+        const cardBelow = elementBelow?.closest('.flashcard-item');
+        
+        if (cardBelow && cardBelow.dataset.index) {
+            const overIndex = parseInt(cardBelow.dataset.index);
+            
+            if (overIndex !== this.dragOverIndex) {
+                // Remove previous drag-over class
+                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                
+                // Add drag-over class to new target
+                cardBelow.classList.add('drag-over');
+                this.dragOverIndex = overIndex;
+            }
+        }
+    }
+    
+    handlePointerUp(e) {
+        if (!this.isDragging || !this.options.enableDragReorder) return;
+        
+        e.preventDefault();
+        
+        // Clean up visual feedback
+        document.querySelectorAll('.dragging, .drag-over').forEach(el => {
+            el.classList.remove('dragging', 'drag-over');
+        });
+        document.body.classList.remove('drag-active');
+        
+        // Perform reorder if valid
+        if (this.dragOverIndex >= 0 && this.dragStartIndex !== this.dragOverIndex) {
+            this.reorderCard(this.dragStartIndex, this.dragOverIndex);
+        }
+        
+        // Reset drag state
+        this.isDragging = false;
+        this.dragStartIndex = -1;
+        this.dragOverIndex = -1;
+    }
+    
+    // ===== DRAG & DROP REORDERING =====
+    
+    reorderCard(fromIndex, toIndex) {
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= this.cards.length || toIndex >= this.cards.length) {
+            return;
+        }
+        
+        // Move card in local array
+        const [movedCard] = this.cards.splice(fromIndex, 1);
+        this.cards.splice(toIndex, 0, movedCard);
+        
+        // Update current card index if necessary
+        if (this.currentCard === fromIndex) {
+            this.currentCard = toIndex;
+        } else if (fromIndex < this.currentCard && toIndex >= this.currentCard) {
+            this.currentCard--;
+        } else if (fromIndex > this.currentCard && toIndex <= this.currentCard) {
+            this.currentCard++;
+        }
+        
+        // Re-render the card list
+        this.renderCardList();
+        
+        // Persist to backend
+        this.persistCardOrder();
+        
+        // Visual feedback
+        this.showReorderFeedback(`Card moved from position ${fromIndex + 1} to ${toIndex + 1}`);
+    }
+    
+    persistCardOrder() {
+        // Get current deck/theme
+        const currentCard = this.getCurrentCard();
+        const deckId = currentCard?.theme || 'default';
+        
+        // Build order array
+        const order = this.cards.map(card => card.id || card.title || `card_${this.cards.indexOf(card)}`);
+        
+        // Send to backend
+        fetch('/api/flashcards/reorder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                deck_id: deckId,
+                order: order
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Card order persisted successfully');
+            } else {
+                console.warn('Failed to persist card order:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error persisting card order:', error);
+        });
+    }
+    
+    showReorderFeedback(message) {
+        // Create or update feedback element
+        let feedback = document.querySelector('.reorder-feedback');
+        if (!feedback) {
+            feedback = document.createElement('div');
+            feedback.className = 'reorder-feedback';
+            document.body.appendChild(feedback);
+        }
+        
+        feedback.textContent = message;
+        feedback.classList.add('show');
+        
+        // Hide after delay
+        setTimeout(() => {
+            feedback.classList.remove('show');
+        }, 2000);
+    }
+    
+    // ===== KEYBOARD REORDERING FOR ACCESSIBILITY =====
+    
+    handleKeyboardReorder(direction) {
+        const currentIndex = this.currentCard;
+        let newIndex;
+        
+        if (direction === 'up' && currentIndex > 0) {
+            newIndex = currentIndex - 1;
+        } else if (direction === 'down' && currentIndex < this.cards.length - 1) {
+            newIndex = currentIndex + 1;
+        } else {
+            return; // Invalid move
+        }
+        
+        this.reorderCard(currentIndex, newIndex);
+    }
+    
+    renderCardList() {
+        // This method would render a list view of cards with drag handles
+        // For now, just update the current card display
+        this.renderCurrentCard();
+    }
+    
     // ===== KEYBOARD HANDLING =====
     
     handleKeypress(e) {
@@ -574,6 +769,18 @@ class AdvancedFlashcardSystem {
             case 'ArrowRight':
                 e.preventDefault();
                 this.nextCard();
+                break;
+            case 'ArrowUp':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    this.handleKeyboardReorder('up');
+                }
+                break;
+            case 'ArrowDown':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    this.handleKeyboardReorder('down');
+                }
                 break;
         }
     }

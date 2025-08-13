@@ -4,6 +4,7 @@ import csv
 import os
 import sys
 import time
+import json
 from datetime import datetime
 
 from services.analyzer import analyze_offline
@@ -27,6 +28,12 @@ from services.teacher import LocalTeacher
 from services.config import load_settings
 from services.llm_adapter import LLMClient
 from services.performance_cache import performance_cache, cached
+from services.local_llm import get_local_llm
+from services.ai_pipeline import get_ai_pipeline
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 app = Flask(
@@ -34,6 +41,12 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static"),
     template_folder=os.path.join(BASE_DIR, "templates"),
 )
+
+# Configure CORS for development
+from flask_cors import CORS
+cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
+if cors_origins:
+    CORS(app, origins=cors_origins)
 
 teacher = LocalTeacher()
 
@@ -252,10 +265,28 @@ def offline_analyze():
 
 @app.route("/api/ai/analyze", methods=["POST"])
 def ai_analyze():
+    """Legacy AI analyze - enhanced with new pipeline capabilities"""
     data = request.get_json(force=True)
     text = data.get("text", "")
     force = data.get("force", False)
     reason = data.get("reason", "")
+    goals = data.get("goals", [])
+    
+    # If enhanced analysis is requested, use new pipeline
+    if goals or data.get("enhanced", False):
+        try:
+            pipeline = get_ai_pipeline()
+            analysis = pipeline.analyze_text(text, goals)
+            return jsonify({
+                "drafts": [{"title": kp, "content": kp} for kp in analysis.key_points],
+                "reason": "enhanced_pipeline",
+                "enhanced": analysis.to_dict()
+            })
+        except Exception as e:
+            # Fall back to legacy analysis
+            pass
+    
+    # Legacy analysis path
     offline_raw = analyze_offline(text)
     offline_drafts = validate_items(offline_raw)
     need_ai = ai_needed(text, offline_drafts)
@@ -838,6 +869,254 @@ def after_request(response):
 def internal_error(error):
     app._error_count = getattr(app, '_error_count', 0) + 1
     return jsonify({"error": "Internal server error"}), 500
+
+
+# ===== NEW API ENDPOINTS FOR DRAG & DROP AND LLM INTEGRATION =====
+
+@app.route("/api/flashcards/reorder", methods=["POST"])
+def reorder_flashcards():
+    """Persist flashcard reorder from drag & drop"""
+    try:
+        data = request.get_json()
+        deck_id = data.get("deck_id")
+        order = data.get("order", [])
+        
+        if not deck_id or not order:
+            return jsonify({"error": "Missing deck_id or order"}), 400
+        
+        # Load current database
+        db = load_db()
+        
+        # Find cards for this deck and reorder them
+        cards = db.get("cards", [])
+        deck_cards = [c for c in cards if c.get("theme") == deck_id]
+        other_cards = [c for c in cards if c.get("theme") != deck_id]
+        
+        # Create a mapping of card IDs to cards
+        card_map = {c.get("id", str(i)): c for i, c in enumerate(deck_cards)}
+        
+        # Reorder according to the new order
+        reordered_cards = []
+        for card_id in order:
+            if card_id in card_map:
+                reordered_cards.append(card_map[card_id])
+        
+        # Add any missing cards (in case of sync issues)
+        included_ids = set(order)
+        for card in deck_cards:
+            card_id = card.get("id", str(len(reordered_cards)))
+            if card_id not in included_ids:
+                reordered_cards.append(card)
+        
+        # Update database with new order
+        db["cards"] = other_cards + reordered_cards
+        save_db(db)
+        
+        return jsonify({
+            "success": True,
+            "deck_id": deck_id,
+            "reordered_count": len(reordered_cards)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ai/generate", methods=["POST"])
+def ai_generate():
+    """Generate text using local LLM with optional streaming"""
+    try:
+        data = request.get_json()
+        prompt = data.get("prompt", "")
+        system = data.get("system")
+        temperature = data.get("temperature", 0.2)
+        stream = data.get("stream", False)
+        
+        if not prompt:
+            return jsonify({"error": "Missing prompt"}), 400
+        
+        llm = get_local_llm()
+        
+        if stream:
+            # Return Server-Sent Events for streaming
+            def generate_stream():
+                try:
+                    response_stream = llm.generate(
+                        prompt=prompt,
+                        system=system,
+                        temperature=temperature,
+                        stream=True
+                    )
+                    
+                    for chunk in response_stream:
+                        if hasattr(chunk, "get"):
+                            content = chunk.get("message", {}).get("content", "")
+                        else:
+                            content = str(chunk)
+                        
+                        if content:
+                            yield f"data: {json.dumps({'content': content})}\n\n"
+                    
+                    yield f"data: {json.dumps({'done': True})}\n\n"
+                    
+                except Exception as e:
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            
+            return Response(
+                generate_stream(),
+                mimetype='text/event-stream',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            )
+        else:
+            # Regular JSON response
+            response = llm.generate(
+                prompt=prompt,
+                system=system,
+                temperature=temperature,
+                stream=False
+            )
+            
+            return jsonify({
+                "text": response.get("text", ""),
+                "model": llm.config.model,
+                "provider": llm.config.provider
+            })
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ai/exercises", methods=["POST"])
+def ai_exercises():
+    """Generate educational exercises from text"""
+    try:
+        data = request.get_json()
+        text = data.get("text", "")
+        
+        if not text:
+            return jsonify({"error": "Missing text"}), 400
+        
+        # Use AI pipeline to generate study materials
+        pipeline = get_ai_pipeline()
+        materials = pipeline.generate_study_materials(text)
+        
+        # Extract exercises from the materials
+        exercises = []
+        
+        # Add flashcards as recall exercises
+        for card in materials.flashcards:
+            exercises.append({
+                "type": "flashcard",
+                "question": card.get("front", ""),
+                "answer": card.get("back", ""),
+                "difficulty": "medium"
+            })
+        
+        # Add quizzes
+        exercises.extend(materials.quizzes)
+        
+        # Add mnemonics as memory exercises
+        for mnemonic in materials.mnemonics:
+            exercises.append({
+                "type": "mnemonic",
+                "concept": mnemonic.get("concept", ""),
+                "device": mnemonic.get("mnemonic", ""),
+                "difficulty": "easy"
+            })
+        
+        return jsonify({
+            "exercises": exercises,
+            "total_count": len(exercises),
+            "by_type": {
+                "flashcard": len(materials.flashcards),
+                "quiz": len(materials.quizzes),
+                "mnemonic": len(materials.mnemonics)
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/health", methods=["GET"])
+def api_health():
+    """Comprehensive health check including LLM providers"""
+    try:
+        # Check LLM health
+        llm = get_local_llm()
+        llm_healthy, llm_message, llm_details = llm.health_check()
+        
+        # Check basic app health
+        db = load_db()
+        card_count = len(db.get("cards", []))
+        
+        # Check AI pipeline
+        pipeline_healthy = True
+        pipeline_error = None
+        try:
+            pipeline = get_ai_pipeline()
+        except Exception as e:
+            pipeline_healthy = False
+            pipeline_error = str(e)
+        
+        health_status = {
+            "status": "healthy" if llm_healthy and pipeline_healthy else "degraded",
+            "timestamp": datetime.now().isoformat(),
+            "components": {
+                "llm": {
+                    "status": "healthy" if llm_healthy else "unhealthy",
+                    "message": llm_message,
+                    "details": llm_details
+                },
+                "database": {
+                    "status": "healthy",
+                    "card_count": card_count
+                },
+                "ai_pipeline": {
+                    "status": "healthy" if pipeline_healthy else "unhealthy",
+                    "error": pipeline_error
+                }
+            }
+        }
+        
+        status_code = 200 if (llm_healthy and pipeline_healthy) else 503
+        return jsonify(health_status), status_code
+        
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+
+# Handle favicon and apple touch icons to avoid 404 noise
+@app.route("/favicon.ico")
+def favicon():
+    try:
+        return send_file("static/favicon.ico", mimetype="image/vnd.microsoft.icon")
+    except FileNotFoundError:
+        # Return empty response if favicon doesn't exist
+        from flask import make_response
+        response = make_response('', 404)
+        response.headers['Content-Type'] = 'image/vnd.microsoft.icon'
+        return response
+
+
+@app.route("/apple-touch-icon.png")
+def apple_touch_icon():
+    try:
+        return send_file("static/apple-touch-icon.png", mimetype="image/png")
+    except FileNotFoundError:
+        # Return empty response if icon doesn't exist
+        from flask import make_response
+        response = make_response('', 404)
+        response.headers['Content-Type'] = 'image/png'
+        return response
 
 
 @app.route("/")

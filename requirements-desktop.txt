@@ -1,0 +1,7 @@
+# Desktop GUI dependencies for Studying Coach
+pywebview>=4.0.0
+tkinter
+requests>=2.25.0
+
+# Include all base dependencies
+-r requirements.txt

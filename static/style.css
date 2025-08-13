@@ -252,6 +252,30 @@ button:hover:not(:disabled) {
     background: rgba(255,255,255,0.8);
 }
 
+#chat-log {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-bottom: .5rem;
+    padding: .5rem;
+    border: 1px solid #ccc;
+    border-radius: var(--radius);
+    background: rgba(255,255,255,0.8);
+}
+.chat-user {
+    text-align: right;
+    margin: .25rem 0;
+}
+.chat-bot {
+    text-align: left;
+    margin: .25rem 0;
+}
+#chat-input {
+    width: 80%;
+    padding: .5rem;
+    border: 1px solid #ccc;
+    border-radius: var(--radius);
+}
+
 .toast {
     position: fixed;
     bottom: 1rem;

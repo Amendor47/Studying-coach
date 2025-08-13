@@ -21,6 +21,7 @@ from services.scheduler import (
 from services.parsers import extract_text
 from services.webfetch import web_context_from_query
 from pathlib import Path
+from services.teacher import LocalTeacher
 
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 app = Flask(
@@ -28,6 +29,8 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static"),
     template_folder=os.path.join(BASE_DIR, "templates"),
 )
+
+teacher = LocalTeacher()
 
 
 # ---- configuration & API key management ----
@@ -349,6 +352,14 @@ def web_enrich():
 
     citations = [{"title": p["title"], "url": p["url"]} for p in pages]
     return jsonify({"added": len(drafts), "drafts": drafts, "citations": citations})
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat_route():
+    data = request.get_json(force=True)
+    msg = data.get("message", "")
+    answer = teacher.chat(msg)
+    return jsonify({"answer": answer})
 
 
 @app.route("/")

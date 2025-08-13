@@ -8,6 +8,9 @@ const webQ = document.getElementById('web-q');
 const webSearchBtn = document.getElementById('web-search');
 const webAI = document.getElementById('web-ai');
 const webResults = document.getElementById('web-results');
+const chatInput = document.getElementById('chat-input');
+const chatSend = document.getElementById('chat-send');
+const chatLog = document.getElementById('chat-log');
 let sessionLimit = null;
 
 function toast(msg) {
@@ -466,6 +469,27 @@ async function reviewCard(id, quality) {
   });
   loadDueCards();
 }
+
+chatSend?.addEventListener('click', async () => {
+  const msg = (chatInput.value || '').trim();
+  if (!msg) return;
+  const divU = document.createElement('div');
+  divU.className = 'chat-user';
+  divU.textContent = msg;
+  chatLog.appendChild(divU);
+  chatInput.value = '';
+  const resp = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: msg })
+  });
+  const data = await resp.json();
+  const divB = document.createElement('div');
+  divB.className = 'chat-bot';
+  divB.textContent = data.answer;
+  chatLog.appendChild(divB);
+  chatLog.scrollTop = chatLog.scrollHeight;
+});
 
 // --- API key handling ---
 async function checkKey() {

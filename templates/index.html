@@ -15,6 +15,7 @@
             <button class="tab" data-tab="courses" role="tab">Fiches de cours</button>
             <button class="tab" data-tab="flash" role="tab">Flashcards</button>
             <button class="tab" data-tab="exercises" role="tab">Exercices</button>
+            <button class="tab" data-tab="chat" role="tab">Chat</button>
         </nav>
     </header>
 
@@ -54,6 +55,11 @@
         </section>
         <section id="exercises" class="panel" role="tabpanel">
             <div id="exercise-list" aria-live="polite"></div>
+        </section>
+        <section id="chat" class="panel" role="tabpanel">
+            <div id="chat-log"></div>
+            <input id="chat-input" placeholder="Pose ta question..." />
+            <button id="chat-send">Envoyer</button>
         </section>
     </main>
 

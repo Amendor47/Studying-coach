@@ -71,6 +71,13 @@ else:
     else:
         logger.info("CORS non configuré (production)")
 
+# Model fallback configuration
+DEFAULT_MODEL = os.getenv("MODEL_NAME", "llama3:8b")
+FALLBACK_MODELS = ["llama3:8b", "llama3.2:3b", "llama3.2:1b", "gemma:2b"]
+
+logger.info(f"Modèle par défaut: {DEFAULT_MODEL}")
+logger.info(f"Modèles de fallback: {FALLBACK_MODELS}")
+
 teacher = LocalTeacher()
 
 

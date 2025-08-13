@@ -444,8 +444,11 @@
       <div class="settings-section">
         <h4>Analyse documentaire</h4>
         <label class="check">
-          <input type="checkbox" id="enable-advanced-analysis" checked /> 
+          <input type="checkbox" id="enable-advanced-analysis" /> 
           <span>Analyse documentaire avancée (OCR, formules mathématiques)</span>
+          <small style="display: block; color: #6c757d; margin-top: 4px;">
+            ⚠️ Requiert Tesseract OCR. Désactivé par défaut en développement.
+          </small>
         </label>
         <label class="check">
           <input type="checkbox" id="enable-multimodal" checked /> 

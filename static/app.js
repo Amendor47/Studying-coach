@@ -355,14 +355,100 @@ function initializeDragAndDrop() {
   });
 }
 
-// Initialiser le drag & drop au chargement
-document.addEventListener('DOMContentLoaded', initializeDragAndDrop);
+// === GUARD D'INITIALISATION ===
+function initializeAppSafely() {
+  try {
+    // Vérifications critiques
+    const criticalElements = ['file-input', 'upload-btn', 'analyze-btn'];
+    const missingElements = criticalElements.filter(id => !document.getElementById(id));
+    
+    if (missingElements.length > 0) {
+      console.warn('Éléments critiques manquants:', missingElements);
+      showFallbackInterface();
+      return;
+    }
+    
+    // Initialisation normale
+    initializeDragAndDrop();
+    console.log('✅ Application initialisée avec succès');
+    
+  } catch (error) {
+    console.error('❌ Erreur d\'initialisation:', error);
+    showFallbackInterface();
+    
+    if (window.uiErrorOverlay) {
+      window.uiErrorOverlay.show(`Erreur d'initialisation: ${error.message}`);
+    }
+  }
+}
+
+function showFallbackInterface() {
+  // Interface de secours minimale
+  const main = document.querySelector('main') || document.body;
+  const fallback = document.createElement('div');
+  fallback.innerHTML = `
+    <div style="
+      background: rgba(220, 53, 69, 0.1); 
+      border: 1px solid #dc3545; 
+      padding: 20px; 
+      margin: 20px; 
+      border-radius: 8px;
+      text-align: center;
+    ">
+      <h3>🛡️ Mode Secours</h3>
+      <p>L'interface principale a rencontré un problème. Utilisation de l'interface de secours.</p>
+      <form id="fallback-form" enctype="multipart/form-data" style="margin-top: 20px;">
+        <input type="file" id="fallback-file" accept=".txt,.md,.pdf,.docx" style="margin: 10px;">
+        <br>
+        <button type="submit" style="
+          background: #dc3545; 
+          color: white; 
+          border: none; 
+          padding: 10px 20px; 
+          border-radius: 4px; 
+          cursor: pointer;
+        ">Upload Simple</button>
+      </form>
+      <div id="fallback-result" style="margin-top: 20px;"></div>
+    </div>
+  `;
+  
+  main.appendChild(fallback);
+  
+  // Handler pour upload de secours
+  document.getElementById('fallback-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('fallback-file');
+    const result = document.getElementById('fallback-result');
+    
+    if (!fileInput.files[0]) {
+      result.innerHTML = '<p style="color: #dc3545;">Veuillez sélectionner un fichier</p>';
+      return;
+    }
+    
+    const form = new FormData();
+    form.append('file', fileInput.files[0]);
+    
+    result.innerHTML = '<p>⏳ Upload en cours...</p>';
+    
+    try {
+      const resp = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await resp.json();
+      result.innerHTML = `<p style="color: #28a745;">✅ ${data.saved || 0} éléments traités</p>`;
+    } catch (error) {
+      result.innerHTML = `<p style="color: #dc3545;">❌ Erreur: ${error.message}</p>`;
+    }
+  });
+}
+
+// Initialiser le drag & drop au chargement AVEC GUARD
+document.addEventListener('DOMContentLoaded', initializeAppSafely);
 
 // Réinitialiser si déjà chargé
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeDragAndDrop);
+  document.addEventListener('DOMContentLoaded', initializeAppSafely);
 } else {
-  initializeDragAndDrop();
+  initializeAppSafely();
 }
   loadDueCards();
 });

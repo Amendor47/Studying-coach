@@ -1,3 +1,4 @@
+
 import hashlib
 import json
 import os
@@ -66,21 +67,21 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
 
     def call_fn(sys: str, usr: str) -> Dict[str, Any]:
         try:
-            import openai  # type: ignore
+            from openai import OpenAI  # type: ignore
         except Exception:
             return {"flashcards": [], "exercices": []}
 
         key = os.getenv("OPENAI_API_KEY")
         if not key:
             return {"flashcards": [], "exercices": []}
-        openai.api_key = key
-        resp = openai.ChatCompletion.create(
+        client = OpenAI(api_key=key)
+        resp = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": sys}, {"role": "user", "content": usr}],
             temperature=0,
         )
         try:
-            return json.loads(resp["choices"][0]["message"]["content"])
+            return json.loads(resp.choices[0].message.content)
         except Exception:
             return {"flashcards": [], "exercices": []}
 

@@ -1,0 +1,56 @@
+{
+  "drafts": [],
+  "flashcards": [
+    {
+      "id": "card_1755125943.912206_0",
+      "recto": "This is a test document for studying coach. It con...",
+      "verso": "Generated from uploaded document",
+      "theme": "Upload",
+      "created": "2025-08-13T22:59:03.912216",
+      "due": "2025-08-13T22:59:03.912220"
+    },
+    {
+      "id": "card_1755126217.293043_0",
+      "recto": "Machine Learning Introduction",
+      "verso": "Generated from uploaded document",
+      "theme": "Upload",
+      "created": "2025-08-13T23:03:37.293058",
+      "due": "2025-08-13T23:03:37.293064"
+    },
+    {
+      "id": "card_1755126217.293068_1",
+      "recto": "Supervised learning uses labeled data",
+      "verso": "Generated from uploaded document",
+      "theme": "Upload",
+      "created": "2025-08-13T23:03:37.293072",
+      "due": "2025-08-13T23:03:37.293074"
+    },
+    {
+      "id": "card_1755126217.293076_2",
+      "recto": "Unsupervised learning finds patterns",
+      "verso": "Generated from uploaded document",
+      "theme": "Upload",
+      "created": "2025-08-13T23:03:37.293079",
+      "due": "2025-08-13T23:03:37.293080"
+    },
+    {
+      "id": "card_1755126217.293083_3",
+      "recto": "Deep learning uses neural networks",
+      "verso": "Generated from uploaded document",
+      "theme": "Upload",
+      "created": "2025-08-13T23:03:37.293085",
+      "due": "2025-08-13T23:03:37.293087"
+    },
+    {
+      "id": "card_1755126217.293089_4",
+      "recto": "Reinforcement learning learns through rewards",
+      "verso": "Generated from uploaded document",
+      "theme": "Upload",
+      "created": "2025-08-13T23:03:37.293091",
+      "due": "2025-08-13T23:03:37.293094"
+    }
+  ],
+  "courses": [],
+  "exercises": [],
+  "settings": {}
+}

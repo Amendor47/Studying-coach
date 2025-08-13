@@ -24,7 +24,7 @@ pip install --upgrade pip >nul
 if exist requirements.txt (
   pip install -r requirements.txt
 ) else (
-  pip install flask openai python-docx pdfminer.six
+  pip install flask openai python-docx pdfminer.six flask-cors
 )
 
 REM 5) Clé OpenAI (facultative)

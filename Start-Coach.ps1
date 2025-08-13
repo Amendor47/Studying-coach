@@ -6,7 +6,7 @@ if (-not $python) { Write-Host "[!] Python introuvable." -ForegroundColor Red; e
 if (-not (Test-Path ".\.venv")) { python -m venv .venv }
 & .\.venv\Scripts\Activate.ps1
 pip install --upgrade pip | Out-Null
-if (Test-Path ".\requirements.txt") { pip install -r requirements.txt } else { pip install flask openai python-docx pdfminer.six }
+if (Test-Path ".\requirements.txt") { pip install -r requirements.txt } else { pip install flask openai python-docx pdfminer.six flask-cors }
 
 if (-not (Test-Path ".\.env")) {
   $key = Read-Host "Entrez votre OPENAI_API_KEY (ou Enter pour offline)"

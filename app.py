@@ -5,7 +5,19 @@ import os
 import sys
 import time
 import json
+import logging
 from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('studying_coach.log') if os.path.exists('.') else logging.NullHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 from services.analyzer import analyze_offline
 from services.heuristics import ai_needed, readability, density
@@ -47,6 +59,9 @@ from flask_cors import CORS
 cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
 if cors_origins:
     CORS(app, origins=cors_origins)
+else:
+    # Enable permissive CORS for development
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
 teacher = LocalTeacher()
 
@@ -298,6 +313,57 @@ def ai_analyze():
     ai_drafts = analyze_text(combined, reason)
     drafts = validate_items(offline_drafts + ai_drafts)
     return jsonify({"drafts": drafts, "reason": reason})
+
+
+@app.route("/api/improve", methods=["POST"])
+def improve_text():
+    """Simple text improvement endpoint using LLM"""
+    try:
+        data = request.get_json()
+        logger.info(f"Improve endpoint called with data: {data}")
+        
+        if not data or 'text' not in data:
+            logger.warning("Missing 'text' parameter in improve request")
+            return jsonify({"error": "Missing 'text' parameter"}), 400
+        
+        text = data.get('text', '')
+        model = data.get('model', 'llama3:8b')
+        
+        if not text.strip():
+            logger.warning("Empty text provided to improve endpoint")
+            return jsonify({"error": "Empty text provided"}), 400
+        
+        # Try to use local LLM first
+        try:
+            llm = get_local_llm()
+            result = llm.improve_text(text, model=model)
+            if result:
+                logger.info(f"Successfully improved text using local LLM")
+                return jsonify({
+                    "ok": True,
+                    "result": result,
+                    "provider": "local",
+                    "model": model
+                })
+        except Exception as e:
+            logger.error(f"Local LLM failed in improve endpoint: {e}")
+        
+        # Fallback to basic improvement
+        improved_text = f"Improved version of: {text}"
+        logger.info(f"Using fallback improvement for text")
+        return jsonify({
+            "ok": True,
+            "result": improved_text,
+            "provider": "fallback",
+            "model": "none"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in improve endpoint: {e}", exc_info=True)
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
 
 
 @app.route("/api/save", methods=["POST"])

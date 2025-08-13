@@ -1,22 +1,23 @@
+/* Softer light palette and reduced contrast for a calmer look */
 :root {
-    --bg: #f3f4f8;
-    --fg: #111;
-    --accent: #3b82f6;
-    --accent-2: #ec4899;
+    --bg: #fafafb;
+    --fg: #222;
+    --accent: #4f8efc;
+    --accent-2: #f9a8d4;
     --radius: 12px;
-    --card-bg: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(239,243,255,0.9));
-    --card-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    --card-bg: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(244,248,255,0.96));
+    --card-shadow: 0 8px 24px rgba(0,0,0,0.08);
     --font: "Inter", system-ui, sans-serif;
     --font-head: "Lora", serif;
 }
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #1e1e2e;
-        --fg: #f5f5f5;
-        --accent: #60a5fa;
-        --accent-2: #f472b6;
-        --card-bg: linear-gradient(135deg, rgba(46,46,66,0.9), rgba(74,74,104,0.9));
-        --card-shadow: 0 12px 32px rgba(0,0,0,0.6);
+        --bg: #2a2a3d;
+        --fg: #e5e7eb;
+        --accent: #8fb1ff;
+        --accent-2: #fbcfe8;
+        --card-bg: linear-gradient(135deg, rgba(58,58,86,0.9), rgba(82,82,112,0.9));
+        --card-shadow: 0 8px 24px rgba(0,0,0,0.5);
     }
 }
 * {
@@ -43,9 +44,9 @@ body {
     display: flex;
     flex-direction: column;
     gap: .5rem;
-    background: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.75);
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0,0,0,0.08);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 .logo {
     font-family: var(--font-head);
@@ -67,7 +68,7 @@ body {
     transition: background .3s, color .3s;
 }
 .tab:hover {
-    background: rgba(0,0,0,0.05);
+    background: rgba(0,0,0,0.03);
 }
 .tab.active {
     background: linear-gradient(135deg, var(--accent), var(--accent-2));

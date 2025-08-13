@@ -193,10 +193,48 @@ def _build_drafts(pairs: List[Tuple[str, str, str]]) -> List[Dict]:
     return drafts
 
 
+def _summarize_para(p: str, max_len: int = 240) -> str:
+    """Return a tiny summary made of 2-3 short sentences."""
+    sents = re.split(r"(?<=[.!?])\s+", p.strip())
+    out: List[str] = []
+    words = 0
+    for s in sents:
+        if not s:
+            continue
+        out.append(s.strip())
+        words += len(s.split())
+        if words >= 45 or len(out) >= 3:
+            break
+    text = " ".join(out).strip()
+    return text[:max_len]
+
+
 def analyze_offline(text: str) -> List[Dict]:
     """Analyze text and return validated draft items."""
     sections = _sections(text)
     pairs = _extract_pairs(sections)
     drafts = _build_drafts(pairs)
-    drafts += _build_courses(sections)
+
+    # generate 'course' fiches for each section
+    for theme, para in sections:
+        kws = _keywords(para, top=5)
+        outline: List[str] = []
+        for line in para.splitlines():
+            line = line.strip(" -•\t")
+            if len(line.split()) >= 3 and any(ch.isalpha() for ch in line):
+                outline.append(line)
+            if len(outline) >= 5:
+                break
+        summary = _summarize_para(para)
+        payload = {
+            "type": "COURSE",
+            "title": theme,
+            "summary": summary,
+            "bullets": outline[:5],
+            "keywords": kws,
+            "theme": theme,
+            "level": 1,
+        }
+        drafts.append({"id": f"co{len(drafts)}", "kind": "course", "payload": payload})
+
     return validate_items(drafts)

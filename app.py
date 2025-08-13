@@ -292,7 +292,10 @@ def web_search():
     q = request.args.get("q", "").strip()
     if not q:
         return jsonify({"results": []})
-    results = web_context_from_query(q, k_pages=5)
+    try:
+        results = web_context_from_query(q, k_pages=5)
+    except Exception:
+        results = []
     return jsonify({
         "results": [
             {"title": r["title"], "url": r["url"], "excerpt": r["excerpt"][:300]}
@@ -309,7 +312,10 @@ def web_enrich():
     if not query:
         return jsonify({"added": 0, "drafts": [], "citations": []})
 
-    pages = web_context_from_query(query, k_pages=3, max_chars=5000)
+    try:
+        pages = web_context_from_query(query, k_pages=3, max_chars=5000)
+    except Exception:
+        pages = []
     combined = "\n\n".join([p["excerpt"] for p in pages])
     offline_drafts = analyze_offline(combined)
 

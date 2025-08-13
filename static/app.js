@@ -44,15 +44,99 @@ for (const tab of tabs) {
   });
 }
 
-// simple pomodoro timer
-let seconds = 25 * 60;
+// === Pomodoro Pro ===
+const WORK_BLOCK_MIN = 25;
+const BREAK_BLOCK_MIN = 5;
+
+let targetMinutes = parseInt(document.getElementById('session-minutes').value || '25', 10);
+let mode = 'work';
+let remaining = WORK_BLOCK_MIN * 60;
+let elapsedTotal = 0;
+let running = false;
+let tickHandle = null;
+
 const timerEl = document.getElementById('timer');
-setInterval(() => {
-  const m = String(Math.floor(seconds / 60)).padStart(2, '0');
-  const s = String(seconds % 60).padStart(2, '0');
-  timerEl.textContent = `${m}:${s}`;
-  if (seconds > 0) seconds--;
-}, 1000);
+const labelEl = document.getElementById('timer-label');
+const startBtn = document.getElementById('timer-start');
+const pauseBtn = document.getElementById('timer-pause');
+const resumeBtn = document.getElementById('timer-resume');
+const resetBtn = document.getElementById('timer-reset');
+const sessionSel = document.getElementById('session-minutes');
+
+function fmt(sec) {
+  const m = String(Math.floor(sec / 60)).padStart(2, '0');
+  const s = String(sec % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function updateDisplay() {
+  timerEl.textContent = fmt(remaining);
+  labelEl.textContent = mode === 'work' ? 'Travail' : 'Pause';
+}
+
+function switchMode(next) {
+  mode = next;
+  remaining = (mode === 'work' ? WORK_BLOCK_MIN : BREAK_BLOCK_MIN) * 60;
+  updateDisplay();
+}
+
+function stopTick() {
+  if (tickHandle) {
+    clearInterval(tickHandle);
+    tickHandle = null;
+  }
+  running = false;
+}
+
+function startTick() {
+  if (running) return;
+  running = true;
+  tickHandle = setInterval(() => {
+    if (remaining > 0) {
+      remaining--;
+      elapsedTotal++;
+      updateDisplay();
+    } else {
+      if (mode === 'work') {
+        switchMode('break');
+        alert('⏸️ Pause 5 minutes !');
+      } else {
+        switchMode('work');
+      }
+    }
+    const elapsedMin = Math.floor(elapsedTotal / 60);
+    if (elapsedMin >= targetMinutes && mode === 'work' && remaining === (WORK_BLOCK_MIN * 60 - 1)) {
+      stopTick();
+      alert(`Session terminée (${targetMinutes} min) ✅`);
+    }
+  }, 1000);
+}
+
+startBtn.addEventListener('click', () => {
+  stopTick();
+  targetMinutes = parseInt(sessionSel.value || '25', 10);
+  elapsedTotal = 0;
+  mode = 'work';
+  remaining = WORK_BLOCK_MIN * 60;
+  updateDisplay();
+  startTick();
+});
+
+pauseBtn.addEventListener('click', () => stopTick());
+resumeBtn.addEventListener('click', () => startTick());
+resetBtn.addEventListener('click', () => {
+  stopTick();
+  elapsedTotal = 0;
+  mode = 'work';
+  remaining = WORK_BLOCK_MIN * 60;
+  updateDisplay();
+});
+
+sessionSel.addEventListener('change', () => {
+  targetMinutes = parseInt(sessionSel.value || '25', 10);
+});
+
+updateDisplay();
 
 // offline analyze
 const btn = document.getElementById('analyze-btn');

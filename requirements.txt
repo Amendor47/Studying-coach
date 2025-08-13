@@ -7,5 +7,4 @@ pyinstaller
 requests
 beautifulsoup4
 trafilatura
-gpt4all
 pyyaml

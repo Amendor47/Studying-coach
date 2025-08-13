@@ -8,3 +8,11 @@ requests
 beautifulsoup4
 trafilatura
 pyyaml
+# Advanced document analysis dependencies
+pillow>=9.0.0
+opencv-python>=4.5.0
+pytesseract>=0.3.8
+langdetect>=1.0.9
+# Optional: for better performance
+scikit-learn>=1.0.0
+scipy>=1.7.0

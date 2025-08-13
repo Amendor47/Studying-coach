@@ -3,15 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Study Coach — Focus</title>
+  <title>Study Coach — Ultimate Learning Solution</title>
   <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#00e0b8" />
+  
+  <!-- Preconnect for performance -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='advanced-flashcards.css') }}" />
+  
+  <!-- PWA Support -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  
+  <!-- Performance optimizations -->
+  <link rel="dns-prefetch" href="//fonts.googleapis.com">
+  <link rel="preload" href="{{ url_for('static', filename='advanced-flashcards.js') }}" as="script">
 </head>
 <body>
-  <!-- subtle grid background -->
+  <!-- Background elements -->
   <div class="bg-grid"></div>
+  <div class="flashcard-progress"></div>
 
   <!-- HEADER -->
   <header class="topbar">
@@ -98,13 +117,67 @@
       <div id="course-cards" class="grid-cols"></div>
     </section>
 
-    <!-- RÉVISIONS -->
+    <!-- RÉVISIONS AVANCÉES -->
     <section id="flash" class="panel" role="tabpanel">
       <div class="panel-head">
-        <h2>Révisions (type Anki/Quizlet)</h2>
-        <p class="muted">Flip cartes, scoring SM-2, progression claire.</p>
+        <h2>Révisions Intelligentes</h2>
+        <p class="muted">Système avancé avec animations 60fps, reconnaissance gestuelle, et algorithmes d'espacement optimal.</p>
+        <div class="revision-stats">
+          <div class="stat-card">
+            <div class="stat-value" id="due-count">0</div>
+            <div class="stat-label">Cartes dues</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="accuracy-rate">0%</div>
+            <div class="stat-label">Précision</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="streak-count">0</div>
+            <div class="stat-label">Série actuelle</div>
+          </div>
+        </div>
       </div>
-      <div id="due-cards" class="grid-cols"></div>
+      
+      <!-- Advanced Flashcard Container -->
+      <div id="flashcard-container" class="flashcard-main-container">
+        <div class="flashcard-placeholder">
+          <div class="placeholder-icon">🧠</div>
+          <div class="placeholder-text">Chargement des cartes intelligentes...</div>
+        </div>
+      </div>
+      
+      <!-- Session Controls -->
+      <div class="session-controls">
+        <button class="btn btn-secondary" id="pause-session">
+          ⏸️ Pause
+        </button>
+        <div class="session-timer" id="session-timer">00:00</div>
+        <button class="btn btn-accent" id="settings-btn">
+          ⚙️ Paramètres
+        </button>
+      </div>
+      
+      <!-- Keyboard shortcuts help -->
+      <div class="keyboard-shortcuts" id="keyboard-help" style="display: none;">
+        <h4>Raccourcis clavier</h4>
+        <div class="shortcut-grid">
+          <div class="shortcut-item">
+            <kbd>Espace</kbd> <span>Retourner la carte</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>1</kbd> <span>Encore (Difficile)</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>2</kbd> <span>Difficile</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>3</kbd> <span>Bien</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>4</kbd> <span>Facile</span>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- EXERCICES -->
@@ -159,6 +232,67 @@
     </div>
   </div>
 
+  <!-- Advanced Features Settings Modal -->
+  <div id="advanced-settings-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content card">
+      <h3>Paramètres Avancés</h3>
+      
+      <div class="settings-section">
+        <h4>Animations et Interface</h4>
+        <label class="check">
+          <input type="checkbox" id="enable-animations" checked /> 
+          <span>Animations hardware-accelerated</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="enable-gestures" checked /> 
+          <span>Reconnaissance gestuelle (mobile)</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="enable-haptics" checked /> 
+          <span>Retour haptique</span>
+        </label>
+      </div>
+      
+      <div class="settings-section">
+        <h4>Apprentissage Intelligent</h4>
+        <div class="setting-row">
+          <label>Méthode pédagogique préférée:</label>
+          <select id="tutoring-method" class="input">
+            <option value="adaptive">Adaptatif (recommandé)</option>
+            <option value="socratic">Méthode Socratique</option>
+            <option value="scaffolding">Échafaudage pédagogique</option>
+            <option value="active_recall">Rappel actif</option>
+            <option value="elaborative">Apprentissage élaboratif</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Durée de session optimale:</label>
+          <input type="range" id="session-length" min="5" max="60" value="25" class="slider">
+          <span id="session-length-value">25 minutes</span>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h4>Analyse documentaire</h4>
+        <label class="check">
+          <input type="checkbox" id="enable-advanced-analysis" checked /> 
+          <span>Analyse documentaire avancée (OCR, formules mathématiques)</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="enable-multimodal" checked /> 
+          <span>Contenu multi-modal (images, audio)</span>
+        </label>
+      </div>
+      
+      <div class="row end">
+        <button id="reset-settings" class="btn btn-ghost">Réinitialiser</button>
+        <button id="save-advanced-settings" class="btn btn-primary">Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='advanced-flashcards.js') }}"></script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

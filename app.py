@@ -3,6 +3,7 @@ import io
 import csv
 import os
 import sys
+from datetime import datetime
 
 from services.analyzer import analyze_offline
 from services.heuristics import ai_needed, readability, density
@@ -70,14 +71,70 @@ def upload_file():
     if not uploaded:
         return jsonify({"error": "no file"}), 400
     use_ai = request.form.get("use_ai", "false").lower() == "true"
+    use_advanced_analysis = request.form.get("use_advanced", "true").lower() == "true"
     minutes = int(request.form.get("session_minutes", 0))
     from datetime import date
     from services.tempfiles import safe_save_upload, safe_unlink
 
     suffix = Path(uploaded.filename).suffix or ".bin"
     tmp_path = safe_save_upload(uploaded, suffix)
+    
     try:
-        text = extract_text(tmp_path.as_posix(), uploaded.filename)
+        # Use advanced document analysis if requested
+        if use_advanced_analysis:
+            from services.advanced_document_analysis import advanced_document_analyzer
+            
+            analysis_result = advanced_document_analyzer.analyze_document(
+                tmp_path.as_posix(), uploaded.filename
+            )
+            
+            # Convert analyzed content back to text for existing pipeline
+            segments = analysis_result.get("segments", [])
+            text = "\n\n".join(seg["content"] for seg in segments if seg["content"])
+            
+            # Store advanced analysis results for later use (converted to serializable format)
+            advanced_metadata = {}
+            if analysis_result:
+                doc_meta = analysis_result.get("metadata")
+                if doc_meta:
+                    # Convert DocumentMetadata to dict
+                    advanced_metadata = {
+                        "document_metadata": {
+                            "filename": doc_meta.filename,
+                            "file_type": doc_meta.file_type,
+                            "document_type": doc_meta.document_type.value if hasattr(doc_meta.document_type, 'value') else str(doc_meta.document_type),
+                            "language": doc_meta.language,
+                            "page_count": doc_meta.page_count,
+                            "word_count": doc_meta.word_count,
+                            "has_formulas": doc_meta.has_formulas,
+                            "has_images": doc_meta.has_images,
+                            "has_tables": doc_meta.has_tables,
+                            "complexity_score": doc_meta.complexity_score,
+                            "reading_level": doc_meta.reading_level
+                        },
+                        "formulas": [
+                            {
+                                "original_text": f.original_text,
+                                "latex_representation": f.latex_representation,
+                                "formula_type": f.formula_type,
+                                "variables": f.variables,
+                                "constants": f.constants,
+                                "operations": f.operations,
+                                "complexity_level": f.complexity_level,
+                                "subject_area": f.subject_area
+                            }
+                            for f in analysis_result.get("formulas", [])
+                        ],
+                        "classified_content": analysis_result.get("classified_content", {}),
+                        "learning_objectives": analysis_result.get("learning_objectives", []),
+                        "concept_map": analysis_result.get("concept_map", {}),
+                        "educational_insights": analysis_result.get("educational_insights", {})
+                    }
+        else:
+            # Fallback to original text extraction
+            text = extract_text(tmp_path.as_posix(), uploaded.filename)
+            advanced_metadata = {}
+            
     finally:
         safe_unlink(tmp_path)
 
@@ -98,6 +155,11 @@ def upload_file():
 
     for d in drafts:
         d.setdefault("status", "new")
+        
+        # Enrich with advanced analysis metadata if available
+        if advanced_metadata:
+            d.setdefault("advanced_metadata", {})
+            d["advanced_metadata"].update(advanced_metadata)
 
     db["drafts"].extend(drafts)
     for d in drafts:
@@ -118,13 +180,28 @@ def upload_file():
     plan = generate_plan(db.get("drafts", []))
     themes = list({d.get("payload", {}).get("theme", "Général") for d in drafts})
     due = due_cards(db)
-    return jsonify({
+    
+    response_data = {
         "saved": len(drafts),
         "plan": plan,
         "themes": themes,
         "due": due,
         "minutes": minutes,
-    })
+    }
+    
+    # Include advanced analysis results if available
+    if advanced_metadata:
+        response_data["advanced_analysis"] = {
+            "document_type": advanced_metadata.get("document_metadata", {}).get("document_type"),
+            "complexity_score": advanced_metadata.get("document_metadata", {}).get("complexity_score"),
+            "reading_level": advanced_metadata.get("document_metadata", {}).get("reading_level"),
+            "formula_count": len(advanced_metadata.get("formulas", [])),
+            "learning_objectives": advanced_metadata.get("learning_objectives", []),
+            "estimated_study_time": advanced_metadata.get("educational_insights", {}).get("estimated_study_time", 0),
+            "recommendations": advanced_metadata.get("educational_insights", {}).get("learning_recommendations", [])
+        }
+    
+    return jsonify(response_data)
 
 
 @app.route("/api/offline/analyze", methods=["POST"])
@@ -385,6 +462,219 @@ def chat_route():
     msg = data.get("message", "")
     answer = teacher.chat(msg)
     return jsonify({"answer": answer})
+
+
+@app.route("/api/advanced/analyze_document", methods=["POST"])
+def advanced_document_analysis():
+    """Advanced document analysis with educational intelligence"""
+    uploaded = request.files.get("file")
+    if not uploaded:
+        return jsonify({"error": "no file"}), 400
+        
+    from services.tempfiles import safe_save_upload, safe_unlink
+    from services.advanced_document_analysis import advanced_document_analyzer
+    
+    suffix = Path(uploaded.filename).suffix or ".bin"
+    tmp_path = safe_save_upload(uploaded, suffix)
+    
+    try:
+        analysis_result = advanced_document_analyzer.analyze_document(
+            tmp_path.as_posix(), uploaded.filename
+        )
+        return jsonify(analysis_result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        safe_unlink(tmp_path)
+
+
+@app.route("/api/advanced/educational_content", methods=["POST"])
+def generate_educational_content():
+    """Generate adaptive educational content using advanced AI"""
+    data = request.get_json(force=True)
+    text = data.get("text", "")
+    user_id = data.get("user_id", "default")
+    learning_objective = data.get("learning_objective", {})
+    
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+        
+    try:
+        from services.educational_ai import educational_ai
+        from services.contextual_memory import contextual_memory
+        
+        # Get user profile for personalization
+        user_profile = contextual_memory.get_or_create_profile(user_id)
+        
+        # Create learning objective object
+        from services.educational_ai import LearningObjective, DifficultyLevel
+        objective = LearningObjective(
+            id=learning_objective.get("id", "default"),
+            title=learning_objective.get("title", "General Learning"),
+            description=learning_objective.get("description", "Learn the provided content"),
+            level=DifficultyLevel(learning_objective.get("level", 2)),  # Default to intermediate
+            prerequisites=learning_objective.get("prerequisites", []),
+            mastery_criteria=learning_objective.get("mastery_criteria", [])
+        )
+        
+        # Generate adaptive content
+        content = educational_ai.generate_adaptive_content(text, user_profile, objective)
+        
+        return jsonify(content)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/advanced/learning_analytics", methods=["GET"])
+def learning_analytics():
+    """Get comprehensive learning analytics for a user"""
+    user_id = request.args.get("user_id", "default")
+    
+    try:
+        from services.contextual_memory import contextual_memory
+        analytics = contextual_memory.generate_learning_analytics(user_id)
+        return jsonify(analytics)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/advanced/learning_interaction", methods=["POST"])
+def record_learning_interaction():
+    """Record a learning interaction for memory tracking"""
+    data = request.get_json(force=True)
+    
+    user_id = data.get("user_id", "default")
+    concept_id = data.get("concept_id", "")
+    concept_name = data.get("concept_name", "")
+    is_correct = data.get("is_correct", False)
+    response_time = data.get("response_time", 0.0)
+    confidence = data.get("confidence", 0.5)
+    context = data.get("context", "")
+    
+    if not concept_id or not concept_name:
+        return jsonify({"error": "concept_id and concept_name required"}), 400
+    
+    try:
+        from services.contextual_memory import contextual_memory
+        contextual_memory.record_learning_interaction(
+            user_id, concept_id, concept_name, is_correct, 
+            response_time, confidence, context
+        )
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/advanced/due_concepts", methods=["GET"])
+def get_due_concepts():
+    """Get concepts due for review with intelligent prioritization"""
+    user_id = request.args.get("user_id", "default")
+    max_count = int(request.args.get("max_count", 10))
+    
+    try:
+        from services.contextual_memory import contextual_memory
+        due_concepts = contextual_memory.get_due_concepts(user_id, max_count)
+        
+        # Convert to JSON-serializable format
+        result = []
+        for concept in due_concepts:
+            result.append({
+                "concept_id": concept.concept_id,
+                "concept_name": concept.concept_name,
+                "knowledge_state": concept.knowledge_state.value,
+                "memory_strength": concept.memory_strength,
+                "confidence_level": concept.confidence_level,
+                "accuracy_rate": concept.accuracy_rate(),
+                "days_overdue": (datetime.now() - concept.next_review).days,
+                "review_count": concept.review_count
+            })
+        
+        return jsonify({"due_concepts": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/advanced/learning_path", methods=["POST"])
+def optimize_learning_path():
+    """Generate optimized learning path"""
+    data = request.get_json(force=True)
+    user_id = data.get("user_id", "default")
+    target_concepts = data.get("target_concepts", [])
+    
+    if not target_concepts:
+        return jsonify({"error": "target_concepts required"}), 400
+    
+    try:
+        from services.contextual_memory import contextual_memory
+        learning_path = contextual_memory.optimize_learning_path(user_id, target_concepts)
+        return jsonify({"learning_path": learning_path})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/advanced/rag_search", methods=["POST"])
+def advanced_rag_search():
+    """Perform advanced RAG search with educational context"""
+    data = request.get_json(force=True)
+    query = data.get("query", "")
+    include_levels = data.get("include_levels", ["paragraph", "section"])
+    top_k = int(data.get("top_k", 5))
+    
+    if not query:
+        return jsonify({"error": "query required"}), 400
+    
+    try:
+        from services.advanced_rag import advanced_rag, ChunkType
+        
+        # Convert string levels to enum
+        level_map = {
+            "document": ChunkType.DOCUMENT,
+            "chapter": ChunkType.CHAPTER,
+            "section": ChunkType.SECTION,
+            "paragraph": ChunkType.PARAGRAPH,
+            "sentence": ChunkType.SENTENCE
+        }
+        
+        chunk_types = [level_map[level] for level in include_levels if level in level_map]
+        
+        results = advanced_rag.multi_level_retrieval(query, top_k, chunk_types)
+        
+        # Convert results to JSON-serializable format
+        serialized_results = []
+        for result in results:
+            serialized_results.append({
+                "chunk_id": result.chunk.id,
+                "content": result.chunk.content,
+                "chunk_type": result.chunk.chunk_type.value,
+                "content_type": result.chunk.content_type.value,
+                "relevance_score": result.relevance_score,
+                "educational_value": result.educational_value,
+                "concept_coverage": result.concept_coverage,
+                "citations": result.citations,
+                "confidence": result.confidence
+            })
+        
+        return jsonify({"results": serialized_results})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/advanced/concept_network", methods=["GET"])
+def get_concept_network():
+    """Get concept network for knowledge graph visualization"""
+    concept = request.args.get("concept", "")
+    depth = int(request.args.get("depth", 2))
+    
+    if not concept:
+        return jsonify({"error": "concept parameter required"}), 400
+    
+    try:
+        from services.advanced_rag import advanced_rag
+        network = advanced_rag.get_concept_network(concept, depth)
+        return jsonify(network)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/")

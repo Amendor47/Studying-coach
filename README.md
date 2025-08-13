@@ -13,7 +13,7 @@ Prototype studying coach backend inspired by SPEC-2 (V2 "Réussite Max").
 - Optional local semantic search feeding AI context (`services/rag.py`).
 - JSON store helpers (`services/store.py`).
 - Planner and SM‑2 scheduler (`services/planner.py`, `services/scheduler.py`) with
-  API routes to fetch due cards and record reviews.
+  interleaving of due cards across themes and API routes to fetch and record reviews.
 - Export of validated fiches to CSV, PDF or DOCX (`/api/export/<fmt>`).
 - Web interface with tabs *Importer*, *Fiches de cours*, *Flashcards*, *Exercices* and a floating Pomodoro timer. Modern cards use gradient backgrounds with light/dark themes.
 - Cached LLM calls stored under `cache/` and traces written to `logs/`.

@@ -10,12 +10,36 @@ EF_MIN = 1.3
 EF_MAX = 2.8
 
 
+def interleave_by_theme(cards: List[Dict]) -> List[Dict]:
+    """Round-robin shuffle of cards grouped by theme.
+
+    This prevents long runs of cards from the same theme and implements a
+    simple form of interleaving recommended in the spec. The function expects
+    each card to expose a ``theme`` field; cards missing one are grouped under
+    ``"General"``.
+    """
+
+    buckets: Dict[str, List[Dict]] = {}
+    for card in cards:
+        theme = card.get("theme", "General")
+        buckets.setdefault(theme, []).append(card)
+
+    ordered: List[Dict] = []
+    # iterate in round-robin fashion until all buckets are exhausted
+    while any(buckets.values()):
+        for theme in list(buckets.keys()):
+            if buckets[theme]:
+                ordered.append(buckets[theme].pop(0))
+    return ordered
+
+
 def due_cards(db: Dict[str, Any] | None = None) -> List[Dict]:
-    """Return cards whose due date is today or earlier."""
+    """Return due cards interleaved by theme."""
     if db is None:
         db = load_db()
     today = date.today().isoformat()
-    return [c for c in db.get("cards", []) if c.get("srs", {}).get("due", today) <= today]
+    cards = [c for c in db.get("cards", []) if c.get("srs", {}).get("due", today) <= today]
+    return interleave_by_theme(cards)
 
 
 def update_srs(card: Dict, quality: int) -> None:

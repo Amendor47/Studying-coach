@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studying Coach - Simple & Robust</title>
+    <title>Study Coach - Simple & Working</title>
     <style>
         * {
             margin: 0;
@@ -15,8 +15,407 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #333;
+            color: white;
+            padding: 20px;
         }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: #2d3748;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .tab {
+            background: none;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #64748b;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab:hover {
+            background: #f1f5f9;
+            color: #334155;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+        
+        .panel {
+            display: none;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            margin-bottom: 24px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8fafc;
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #eef2ff;
+        }
+        
+        .upload-text {
+            font-size: 18px;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+        
+        .upload-hint {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        select, input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .result-area {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .result-area.show {
+            display: block;
+        }
+        
+        .success {
+            color: #059669;
+            font-weight: 600;
+        }
+        
+        .error {
+            color: #dc2626;
+            font-weight: 600;
+        }
+        
+        .flashcard {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 16px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .flashcard-question {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #2d3748;
+        }
+        
+        .flashcard-answer {
+            color: #64748b;
+        }
+        
+        .health-status {
+            background: #dcfdf7;
+            border: 1px solid #10b981;
+            color: #047857;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Study Coach</h1>
+        
+        <!-- Health Status -->
+        <div id="health-status" class="health-status">
+            ✅ Backend is running and ready!
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="upload">Upload</button>
+            <button class="tab" data-tab="flashcards">Flashcards</button>
+            <button class="tab" data-tab="settings">Settings</button>
+        </div>
+        
+        <!-- Upload Panel -->
+        <div class="panel active" id="upload">
+            <div class="upload-area" id="upload-area">
+                <div class="upload-text">📄 Click or drag files here</div>
+                <div class="upload-hint">Supports PDF, DOCX, TXT files</div>
+                <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md">
+            </div>
+            
+            <div class="controls">
+                <button id="upload-btn" disabled>Upload & Process</button>
+                <label>
+                    <input type="checkbox" id="use-ai"> Use AI Enhancement
+                </label>
+                <select id="session-minutes">
+                    <option value="25">25 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">60 min</option>
+                </select>
+            </div>
+            
+            <div id="upload-result" class="result-area"></div>
+        </div>
+        
+        <!-- Flashcards Panel -->
+        <div class="panel" id="flashcards">
+            <h2>📝 Your Flashcards</h2>
+            <div id="flashcard-list">
+                <p>No flashcards yet. Upload a file to get started!</p>
+            </div>
+        </div>
+        
+        <!-- Settings Panel -->
+        <div class="panel" id="settings">
+            <h2>⚙️ Settings</h2>
+            <p>Backend Status: <span id="backend-status">Checking...</span></p>
+            <button id="check-health" style="margin-top: 12px;">Check Backend Health</button>
+        </div>
+    </div>
+
+    <script>
+        // Simple JavaScript for UI interactions
+        console.log('Studying Coach UI loaded');
+        
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and panels
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                tab.classList.add('active');
+                
+                // Show corresponding panel
+                const panelId = tab.dataset.tab;
+                document.getElementById(panelId).classList.add('active');
+            });
+        });
+        
+        // File upload handling
+        const fileInput = document.getElementById('file-input');
+        const uploadArea = document.getElementById('upload-area');
+        const uploadBtn = document.getElementById('upload-btn');
+        const uploadResult = document.getElementById('upload-result');
+        
+        // Click to select file
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+        
+        // File selection
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                uploadArea.innerHTML = `
+                    <div class="upload-text">📄 ${file.name}</div>
+                    <div class="upload-hint">Ready to upload (${(file.size/1024).toFixed(1)} KB)</div>
+                `;
+                uploadBtn.disabled = false;
+            }
+        }
+        
+        // Upload button
+        uploadBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Processing...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('use_ai', document.getElementById('use-ai').checked);
+                formData.append('session_minutes', document.getElementById('session-minutes').value);
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    uploadResult.className = 'result-area show success';
+                    uploadResult.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <p>Created ${result.saved} flashcard(s) from ${result.filename}</p>
+                        <p>Session: ${result.minutes} minutes</p>
+                    `;
+                    
+                    // Load flashcards
+                    loadFlashcards();
+                } else {
+                    throw new Error(result.detail || 'Upload failed');
+                }
+            } catch (error) {
+                uploadResult.className = 'result-area show error';
+                uploadResult.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload & Process';
+            }
+        });
+        
+        // Load flashcards
+        async function loadFlashcards() {
+            try {
+                const response = await fetch('/api/due');
+                const data = await response.json();
+                
+                const flashcardList = document.getElementById('flashcard-list');
+                
+                if (data.cards && data.cards.length > 0) {
+                    flashcardList.innerHTML = data.cards.map(card => `
+                        <div class="flashcard">
+                            <div class="flashcard-question">${card.recto}</div>
+                            <div class="flashcard-answer">${card.verso}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    flashcardList.innerHTML = '<p>No flashcards yet. Upload a file to get started!</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load flashcards:', error);
+            }
+        }
+        
+        // Health check
+        async function checkHealth() {
+            const statusEl = document.getElementById('backend-status');
+            const healthStatusEl = document.getElementById('health-status');
+            
+            try {
+                const response = await fetch('/api/health/llm');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    statusEl.textContent = `✅ ${data.provider} (${data.model}) - ${data.msg}`;
+                    statusEl.style.color = '#059669';
+                    healthStatusEl.innerHTML = '✅ Backend and LLM are running perfectly!';
+                } else {
+                    statusEl.textContent = `⚠️ ${data.msg}`;
+                    statusEl.style.color = '#d97706';
+                }
+            } catch (error) {
+                statusEl.textContent = '❌ Backend not accessible';
+                statusEl.style.color = '#dc2626';
+                healthStatusEl.innerHTML = '❌ Backend connection failed';
+                healthStatusEl.style.background = '#fef2f2';
+                healthStatusEl.style.borderColor = '#f87171';
+                healthStatusEl.style.color = '#dc2626';
+            }
+        }
+        
+        document.getElementById('check-health').addEventListener('click', checkHealth);
+        
+        // Initial health check
+        checkHealth();
+        
+        console.log('All event listeners attached successfully!');
+    </script>
+</body>
+</html>
         
         .container {
             max-width: 1200px;

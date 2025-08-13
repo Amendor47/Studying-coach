@@ -3,19 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Study Coach — Minimal</title>
+  <title>Study Coach — Focus</title>
   <meta name="color-scheme" content="dark light" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
+  <!-- subtle grid background -->
   <div class="bg-grid"></div>
+
+  <!-- HEADER -->
   <header class="topbar">
     <div class="brand">
-      <img src="{{ url_for('static', filename='logo.svg') }}" alt="" class="logo" />
-      <span class="title">Study Coach</span>
+      <svg class="logo" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="3" y="6" width="18" height="12" rx="6" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+      </svg>
+      <span class="title">Study&nbsp;Coach</span>
     </div>
+
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="import" role="tab">Importer</button>
       <button class="tab" data-tab="courses" role="tab">Cours</button>
@@ -25,28 +32,35 @@
       <button class="tab" data-tab="settings" role="tab">Paramètres</button>
     </nav>
   </header>
+
+  <!-- HERO -->
   <section class="hero">
     <div class="wrapper hero-inner">
       <h1 class="h1">Designed for focus</h1>
-      <p class="sub">Un coach d’étude local, rapide et privé. Noir & blanc, lisible, efficace.</p>
+      <p class="sub">Un coach d’étude privé, rapide et lisible. Minimal, noir & blanc, avec juste ce qu’il faut d’accent.</p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#import">Commencer</a>
-        <a class="btn btn-ghost" href="#web">Recherche web</a>
+        <a class="btn btn-ghost" href="#web">Enrichir via Web</a>
       </div>
     </div>
   </section>
+
+  <!-- MAIN -->
   <main class="wrapper stack">
+    <!-- IMPORT -->
     <section id="import" class="panel active" role="tabpanel">
       <div class="panel-head">
         <h2>Importer un cours</h2>
-        <p class="muted">PDF, DOCX, TXT ou Markdown. Analyser hors-IA ou améliorer via IA.</p>
+        <p class="muted">PDF, DOCX, TXT ou Markdown. Analyse hors-IA fiable, IA optionnelle.</p>
       </div>
+
       <div class="card-grid">
         <div class="card">
           <label class="file">
             <input type="file" id="file-input" accept=".txt,.md,.pdf,.docx" />
-            <span>Glisser-déposer ou cliquer pour choisir</span>
+            <span>Glisser-déposer ou cliquer pour choisir un fichier</span>
           </label>
+
           <div class="row">
             <select id="session-minutes" class="select">
               <option value="25">25 min</option>
@@ -57,44 +71,56 @@
             </select>
             <label class="check"><input type="checkbox" id="use-ai-upload" /> <span>Améliorer via IA</span></label>
           </div>
+
           <div class="row gap">
             <button id="upload-btn" class="btn btn-primary">Analyser le fichier</button>
             <button id="analyze-btn" class="btn">Analyser le texte</button>
             <button id="ai-btn" class="btn btn-ghost" disabled>Améliorer via IA</button>
           </div>
         </div>
+
         <div class="card">
           <textarea id="source-text" placeholder="Colle ici le contenu de ton cours…"></textarea>
         </div>
       </div>
+
+      <!-- brouillons en colonnes -->
       <div id="drafts" class="grid-cols"></div>
     </section>
+
+    <!-- COURS -->
     <section id="courses" class="panel" role="tabpanel">
       <div class="panel-head">
         <h2>Cours & fiches</h2>
-        <p class="muted">Par thème, en colonnes, comme sur les sites modernes.</p>
+        <p class="muted">Navigation par thèmes. Les cartes s’affichent en colonnes lisibles.</p>
       </div>
       <div id="themes" class="chips"></div>
       <div id="course-cards" class="grid-cols"></div>
     </section>
+
+    <!-- RÉVISIONS -->
     <section id="flash" class="panel" role="tabpanel">
       <div class="panel-head">
-        <h2>Révisions (Anki-like)</h2>
-        <p class="muted">Cartes dues, progression et scoring SM-2.</p>
+        <h2>Révisions (type Anki/Quizlet)</h2>
+        <p class="muted">Flip cartes, scoring SM-2, progression claire.</p>
       </div>
       <div id="due-cards" class="grid-cols"></div>
     </section>
+
+    <!-- EXERCICES -->
     <section id="exercises" class="panel" role="tabpanel">
       <div class="panel-head">
-        <h2>Exercices</h2>
-        <p class="muted">QCM interactifs avec correction instantanée.</p>
+        <h2>Exercices QCM</h2>
+        <p class="muted">Vraies questions, 4 options, correction instantanée.</p>
       </div>
       <div id="exercise-list" class="grid-cols"></div>
     </section>
+
+    <!-- WEB -->
     <section id="web" class="panel" role="tabpanel">
       <div class="panel-head">
         <h2>Recherche web</h2>
-        <p class="muted">Enrichir les fiches à partir de sources en ligne.</p>
+        <p class="muted">Ajoute des sources fiables et transforme-les en fiches.</p>
       </div>
       <div class="card">
         <div class="row">
@@ -105,27 +131,34 @@
         <div id="web-results" class="stack-sm"></div>
       </div>
     </section>
+
+    <!-- PARAMÈTRES -->
     <section id="settings" class="panel" role="tabpanel">
       <div class="panel-head">
         <h2>Paramètres</h2>
-        <p class="muted">Thème, police, fournisseur LLM…</p>
+        <p class="muted">Profil IA, thème, taille du texte, etc.</p>
       </div>
       <div class="card">
-        <p>À compléter selon tes options. Le style est prêt.</p>
+        <p>Interface prête. Branche tes options ici si besoin.</p>
       </div>
     </section>
   </main>
-  <div id="timer" class="timer" aria-live="polite">25:00</div>
+
+  <!-- TIMER -->
+  <div id="timer" class="timer" aria-live="polite" title="Pomodoro">25:00</div>
+
+  <!-- MODAL API KEY -->
   <div id="key-modal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-content card">
       <h3>Clé API OpenAI</h3>
-      <p class="muted">Stockée localement, utilisée seulement si tu choisis l’IA cloud.</p>
+      <p class="muted">Stockée localement. Utilisée uniquement si tu actives l’IA cloud.</p>
       <input type="password" id="key-input" class="input" placeholder="sk-..." />
       <div class="row end">
         <button id="save-key" class="btn btn-primary">Enregistrer</button>
       </div>
     </div>
   </div>
+
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

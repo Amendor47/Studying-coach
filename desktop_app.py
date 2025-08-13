@@ -10,7 +10,6 @@ import threading
 import time
 import webbrowser
 from pathlib import Path
-from tkinter import Tk, messagebox
 import subprocess
 import socket
 
@@ -24,10 +23,20 @@ except ImportError:
 # Try to import tkinter for basic GUI
 try:
     import tkinter as tk
-    from tkinter import ttk
+    from tkinter import ttk, messagebox
     HAS_TKINTER = True
 except ImportError:
-    HAS_TKINTER = False
+    try:
+        # Python 2 fallback (unlikely but just in case)
+        import Tkinter as tk
+        import ttk
+        import tkMessageBox as messagebox
+        HAS_TKINTER = True
+    except ImportError:
+        HAS_TKINTER = False
+        tk = None
+        ttk = None
+        messagebox = None
 
 
 def find_free_port(start_port=5000, end_port=5010):
@@ -63,15 +72,24 @@ def start_flask_server(port):
 def wait_for_server(port, timeout=30):
     """Wait for the server to be ready."""
     import time
-    import requests
     
     start_time = time.time()
     while time.time() - start_time < timeout:
         try:
-            response = requests.get(f'http://127.0.0.1:{port}/', timeout=2)
-            if response.status_code == 200:
-                return True
-        except requests.exceptions.RequestException:
+            # Try a simple socket connection first (faster than HTTP)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                result = s.connect_ex(('127.0.0.1', port))
+                if result == 0:
+                    # Port is open, now test if it's our Flask app
+                    time.sleep(0.5)  # Give Flask a moment to be ready
+                    try:
+                        import requests
+                        response = requests.get(f'http://127.0.0.1:{port}/', timeout=2)
+                        if response.status_code == 200:
+                            return True
+                    except:
+                        pass  # HTTP not ready yet, continue waiting
+        except:
             pass
         time.sleep(0.5)
     return False
@@ -88,11 +106,22 @@ class StudyCoachDesktop:
     def start_server(self):
         """Start the Flask server."""
         print(f"[*] Démarrage du serveur sur le port {self.port}...")
-        self.flask_process = start_flask_server(self.port)
+        
+        try:
+            self.flask_process = start_flask_server(self.port)
+        except Exception as e:
+            raise Exception(f"Impossible de démarrer le serveur Flask: {e}")
         
         # Wait for server to be ready
+        print("[*] Attente du démarrage du serveur...")
         if not wait_for_server(self.port):
-            raise Exception("Le serveur n'a pas pu démarrer dans le délai imparti")
+            # Try to get error information from the process
+            if self.flask_process.poll() is not None:
+                stdout, stderr = self.flask_process.communicate(timeout=5)
+                error_msg = stderr.decode('utf-8', errors='ignore') if stderr else "Erreur inconnue"
+                raise Exception(f"Le serveur n'a pas pu démarrer: {error_msg}")
+            else:
+                raise Exception("Le serveur n'a pas pu démarrer dans le délai imparti")
         
         print(f"[*] Serveur prêt sur http://127.0.0.1:{self.port}")
     

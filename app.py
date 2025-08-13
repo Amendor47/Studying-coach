@@ -3,6 +3,7 @@ import io
 import csv
 import os
 import sys
+import time
 
 from services.analyzer import analyze_offline
 from services.heuristics import ai_needed, readability, density
@@ -356,10 +357,38 @@ def web_enrich():
 
 @app.route("/api/chat", methods=["POST"])
 def chat_route():
+    """Simple chat endpoint with optional cloud LLM and local fallback."""
     data = request.get_json(force=True)
-    msg = data.get("message", "")
-    answer = teacher.chat(msg)
-    return jsonify({"answer": answer})
+    messages = data.get("messages", [])
+    force_local = bool(data.get("force_local", False))
+
+    if not isinstance(messages, list) or not messages:
+        return jsonify({"error": "no messages"}), 400
+
+    start = time.time()
+    provider = "local"
+    try:
+        if not force_local and os.getenv("OPENAI_API_KEY"):
+            import openai  # type: ignore
+
+            openai.api_key = os.getenv("OPENAI_API_KEY")
+            resp = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=0.7,
+            )
+            answer = resp["choices"][0]["message"]["content"].strip()
+            provider = "openai"
+        else:
+            answer = teacher.chat(messages[-1].get("content", ""))
+    except Exception as exc:  # pragma: no cover - network issues
+        app.logger.warning("chat error %s; falling back to local", exc)
+        answer = teacher.chat(messages[-1].get("content", ""))
+        provider = "local"
+
+    duration = time.time() - start
+    app.logger.info("chat provider=%s duration=%.2fs", provider, duration)
+    return jsonify({"answer": answer, "provider": provider, "duration": duration})
 
 
 @app.route("/")

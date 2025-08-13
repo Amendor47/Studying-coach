@@ -13,5 +13,6 @@ if (-not (Test-Path ".\.env")) {
   Set-Content -Path ".\.env" -Value "OPENAI_API_KEY=$key"
 }
 
-Start-Process "http://127.0.0.1:5000"
+# Ouvrir l'UI après un léger délai pour laisser le serveur démarrer
+Start-Job { Start-Sleep -Seconds 2; Start-Process "http://127.0.0.1:5000" } | Out-Null
 python .\app.py

@@ -29,10 +29,10 @@ if exist requirements.txt (
 
 REM 5) Clé OpenAI (facultative)
 if not exist .env (
-  set /p KEY=Entrez votre OPENAI_API_KEY (laisser vide pour mode offline): 
+  set /p KEY=Entrez votre OPENAI_API_KEY (laisser vide pour mode offline):
   > .env echo OPENAI_API_KEY=%KEY%
 )
 
 REM 6) Lancer serveur et ouvrir le navigateur
-start "" "http://127.0.0.1:5000"
+start "" cmd /c "ping 127.0.0.1 -n 3 >nul && start "" "http://127.0.0.1:5000""
 python app.py

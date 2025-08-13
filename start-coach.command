@@ -12,5 +12,13 @@ if [ ! -f ".env" ]; then
   read -p "OPENAI_API_KEY (laisser vide pour offline): " KEY
   echo "OPENAI_API_KEY=$KEY" > .env
 fi
-open "http://127.0.0.1:5000"
+
+# Ouvrir l'UI après un court délai selon l'outil disponible
+if command -v open >/dev/null 2>&1; then
+  (sleep 1 && open "http://127.0.0.1:5000") &
+elif command -v xdg-open >/dev/null 2>&1; then
+  (sleep 1 && xdg-open "http://127.0.0.1:5000") &
+else
+  echo "Ouvrez http://127.0.0.1:5000 dans votre navigateur"
+fi
 python3 app.py

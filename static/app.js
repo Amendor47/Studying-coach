@@ -108,7 +108,9 @@ function startTick() {
       }
     }
     const elapsedMin = Math.floor(elapsedTotal / 60);
-    if (elapsedMin >= targetMinutes && mode === 'work' && remaining === (WORK_BLOCK_MIN * 60 - 1)) {
+    // End the session as soon as the requested duration is reached,
+    // regardless of the current timer phase.
+    if (elapsedMin >= targetMinutes) {
       stopTick();
       alert(`Session terminée (${targetMinutes} min) ✅`);
     }

@@ -143,31 +143,26 @@ def _build_drafts(pairs: List[Tuple[str, str, str]]) -> List[Dict]:
             }
         )
 
-        # QCM exercise
+        # QCM exercise (only if we have enough unique distractors)
         distractors = [d for d in definitions if d != definition]
+        distractors = list(dict.fromkeys(distractors))
         random.shuffle(distractors)
-        distractors = distractors[:3]
-        filler_idx = 0
-        while len(distractors) < 3:
-            filler = f"option{filler_idx}"
-            filler_idx += 1
-            if filler not in distractors:
-                distractors.append(filler)
-        options = distractors + [definition]
-        random.shuffle(options)
-        drafts.append(
-            {
-                "id": f"e{idx}",
-                "kind": "exercise",
-                "payload": {
-                    "type": "QCM",
-                    "q": f"Quelle est la définition de {term} ?",
-                    "options": options,
-                    "answer": definition,
-                    "theme": theme,
-                },
-            }
-        )
+        if len(distractors) >= 3:
+            options = distractors[:3] + [definition]
+            random.shuffle(options)
+            drafts.append(
+                {
+                    "id": f"e{idx}",
+                    "kind": "exercise",
+                    "payload": {
+                        "type": "QCM",
+                        "q": f"Quelle est la définition de {term} ?",
+                        "options": options,
+                        "answer": definition,
+                        "theme": theme,
+                    },
+                }
+            )
 
         # Vrai/Faux card
         drafts.append(
@@ -245,4 +240,4 @@ def analyze_offline(text: str) -> List[Dict]:
         }
         drafts.append({"id": f"co{len(drafts)}", "kind": "course", "payload": payload})
 
-    return validate_items(drafts)
+    return drafts

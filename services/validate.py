@@ -54,6 +54,44 @@ def normalize_key(front: str, back: str) -> str:
 seen_hashes = set()
 
 
+def seed_seen_hashes(items: List[Dict]) -> None:
+    """Pre-populate ``seen_hashes`` with existing items to avoid duplicates.
+
+    ``items`` should be a sequence of objects using the same structure as the
+    drafts stored in the database (i.e. ``{"kind": ..., "payload": ...}``).
+    This helper is useful before calling :func:`validate_items` when we want to
+    ensure that newly generated drafts do not duplicate cards or exercises
+    already saved in ``db.json``.
+    """
+
+    for item in items:
+        kind = item.get("kind")
+        payload = item.get("payload", {})
+        try:
+            if kind == "card":
+                ctype = payload.get("type", "QA").upper()
+                front = payload.get("front") or payload.get("recto") or ""
+                if ctype == "QA":
+                    back = payload.get("back") or payload.get("verso") or ""
+                elif ctype == "QCM":
+                    back = payload.get("answer") or payload.get("reponse") or ""
+                elif ctype == "VF":
+                    back = payload.get("answer") or payload.get("reponse") or ""
+                elif ctype == "CLOZE":
+                    back = normalize_answer(payload.get("answer") or payload.get("reponse") or "")
+                elif ctype == "RC":
+                    back = payload.get("answer") or payload.get("reponse") or ""
+                else:
+                    continue
+                seen_hashes.add(normalize_key(front, back))
+            elif kind == "exercise":
+                q = payload.get("q") or payload.get("question") or ""
+                ans = payload.get("answer") or payload.get("reponse") or ""
+                seen_hashes.add(normalize_key(q, str(ans)))
+        except Exception:
+            continue
+
+
 def validate_card(card: Dict) -> None:
     ctype = card.get("type", "QA").upper()
     front = card.get("front") or card.get("recto")

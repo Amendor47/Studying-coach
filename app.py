@@ -8,7 +8,7 @@ from services.analyzer import analyze_offline
 from services.heuristics import ai_needed, readability, density
 from services.store import load_db, save_db
 from typing import Dict
-from services.validate import validate_items
+from services.validate import validate_items, seed_seen_hashes
 from services.ai import analyze_text
 from services.rag import get_context
 from services.planner import generate_plan
@@ -81,6 +81,11 @@ def upload_file():
     finally:
         safe_unlink(tmp_path)
 
+    db = load_db()
+    seed_items = [{"kind": "card", "payload": c} for c in db.get("cards", [])]
+    seed_items += [{"kind": "exercise", "payload": e} for e in db.get("exercises", [])]
+    seed_seen_hashes(seed_items)
+
     offline_drafts = analyze_offline(text)
     drafts = offline_drafts
     if use_ai and os.getenv("OPENAI_API_KEY"):
@@ -94,7 +99,6 @@ def upload_file():
     for d in drafts:
         d.setdefault("status", "new")
 
-    db = load_db()
     db["drafts"].extend(drafts)
     for d in drafts:
         payload = d.get("payload", {})
@@ -127,7 +131,8 @@ def upload_file():
 def offline_analyze():
     data = request.get_json(force=True)
     text = data.get("text", "")
-    drafts = analyze_offline(text)
+    drafts_raw = analyze_offline(text)
+    drafts = validate_items(drafts_raw)
     need_ai = ai_needed(text, drafts)
     meta = {"readability": readability(text), "density": density(text, drafts)}
     return jsonify({"drafts": drafts, "need_ai": need_ai, "meta": meta})
@@ -139,10 +144,11 @@ def ai_analyze():
     text = data.get("text", "")
     force = data.get("force", False)
     reason = data.get("reason", "")
-    offline_drafts = analyze_offline(text)
+    offline_raw = analyze_offline(text)
+    offline_drafts = validate_items(offline_raw)
     need_ai = ai_needed(text, offline_drafts)
     if not (need_ai or force):
-        return jsonify({"drafts": validate_items(offline_drafts), "reason": "offline"})
+        return jsonify({"drafts": offline_drafts, "reason": "offline"})
     reason = reason or ("heuristic" if need_ai else "forced")
     context = get_context(text)
     combined = "\n".join(context) + "\n\n" + text if context else text
@@ -155,10 +161,14 @@ def ai_analyze():
 def save_items():
     data = request.get_json(force=True)
     items = data.get("items", [])
+    db = load_db()
+    seed_items = [{"kind": "card", "payload": c} for c in db.get("cards", [])]
+    seed_items += [{"kind": "exercise", "payload": e} for e in db.get("exercises", [])]
+    seed_seen_hashes(seed_items)
+
     validated = validate_items(items)
     for d in validated:
         d.setdefault("status", "new")
-    db = load_db()
     db["drafts"].extend(validated)
     # also populate dedicated card/exercise stores with SRS defaults
     from datetime import date
@@ -332,6 +342,12 @@ def web_enrich():
     except Exception:
         pages = []
     combined = "\n\n".join([p["excerpt"] for p in pages])
+
+    db = load_db()
+    seed_items = [{"kind": "card", "payload": c} for c in db.get("cards", [])]
+    seed_items += [{"kind": "exercise", "payload": e} for e in db.get("exercises", [])]
+    seed_seen_hashes(seed_items)
+
     offline_drafts = analyze_offline(combined)
 
     drafts = offline_drafts
@@ -341,8 +357,6 @@ def web_enrich():
         drafts = validate_items(offline_drafts + ai_drafts)
     else:
         drafts = validate_items(offline_drafts)
-
-    db = load_db()
     from datetime import date
     for d in drafts:
         d.setdefault("status", "new")

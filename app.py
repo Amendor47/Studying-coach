@@ -60,15 +60,15 @@ def upload_file():
         return jsonify({"error": "no file"}), 400
     use_ai = request.form.get("use_ai", "false").lower() == "true"
     minutes = int(request.form.get("session_minutes", 0))
-    import tempfile
     from datetime import date
+    from services.tempfiles import safe_save_upload, safe_unlink
 
-    tmp = tempfile.NamedTemporaryFile(delete=False)
-    uploaded.save(tmp.name)
+    suffix = Path(uploaded.filename).suffix or ".bin"
+    tmp_path = safe_save_upload(uploaded, suffix)
     try:
-        text = extract_text(tmp.name, uploaded.filename)
+        text = extract_text(tmp_path.as_posix(), uploaded.filename)
     finally:
-        os.unlink(tmp.name)
+        safe_unlink(tmp_path)
 
     offline_drafts = analyze_offline(text)
     drafts = offline_drafts

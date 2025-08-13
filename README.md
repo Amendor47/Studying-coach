@@ -13,6 +13,9 @@ Prototype studying coach backend inspired by SPEC-2 (V2 "Réussite Max").
 - Optional AnythingLLM integration: set `LLM_PROVIDER=anythingllm` and
   point `ANYTHINGLLM_BASE` to a running instance to use its `/v1/chat/completions`
   API instead of OpenAI.
+- Configurable local LLM support: choose a provider via `SC_PROFILE` and a matching
+  `settings-<profile>.yaml` file. A sample `settings-local.yaml` is provided and
+  the `/api/health/llm` endpoint reports availability.
 - Optional local semantic search feeding AI context (`services/rag.py`).
 - Optional web enrichment: DuckDuckGo search + scraping with caching
   (`services/webfetch.py`) and UI button to add results as new fiches.

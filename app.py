@@ -22,6 +22,8 @@ from services.parsers import extract_text
 from services.webfetch import web_context_from_query
 from pathlib import Path
 from services.teacher import LocalTeacher
+from services.config import load_settings
+from services.llm_adapter import LLMClient
 
 BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 app = Flask(
@@ -50,6 +52,15 @@ def api_config():
     os.environ["OPENAI_API_KEY"] = key
     ENV_FILE.write_text(f"OPENAI_API_KEY={key}\n", encoding="utf-8")
     return jsonify({"saved": True})
+
+
+@app.route("/api/health/llm")
+def health_llm():
+    """Check availability of the configured LLM provider."""
+    settings = load_settings()
+    client = LLMClient.from_settings(settings)
+    ok, msg = client.healthcheck()
+    return jsonify({"provider": settings.provider, "model": settings.model, "ok": ok, "msg": msg})
 
 
 @app.route("/api/upload", methods=["POST"])

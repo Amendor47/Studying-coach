@@ -44,9 +44,32 @@ app = Flask(
 
 # Configure CORS for development
 from flask_cors import CORS
+import logging
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('logs/app.log', mode='a') if os.path.exists('logs') else logging.NullHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+# CORS permissif en développement
 cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
 if cors_origins:
     CORS(app, origins=cors_origins)
+    logger.info(f"CORS configuré pour: {cors_origins}")
+else:
+    # En développement, autoriser toutes les origines
+    if os.getenv("FLASK_ENV") == "development" or os.getenv("DEBUG") == "1":
+        CORS(app, origins="*")
+        logger.info("CORS permissif activé (développement)")
+    else:
+        logger.info("CORS non configuré (production)")
 
 teacher = LocalTeacher()
 
@@ -82,37 +105,84 @@ def api_config():
     return jsonify({"saved": True})
 
 
+@app.route("/api/health")
+def health():
+    """Simple health check endpoint - should never crash"""
+    try:
+        return jsonify({"ok": True, "status": "healthy", "timestamp": datetime.now().isoformat()})
+    except Exception as e:
+        logger.error(f"Health endpoint error: {e}")
+        return jsonify({"ok": False, "error": "health check failed"}), 500
+
+
 @app.route("/api/health/llm")
 @cached("health", ttl_seconds=300)  # Cache for 5 minutes
 def health_llm():
-    """Check availability of the configured LLM provider."""
-    settings = load_settings()
-    client = LLMClient.from_settings(settings)
-    ok, msg = client.healthcheck()
-    return jsonify({"provider": settings.provider, "model": settings.model, "ok": ok, "msg": msg})
+    """Check availability of the configured LLM provider - never crashes"""
+    try:
+        # Test Ollama connection
+        import requests
+        response = requests.get("http://127.0.0.1:11434/api/tags", timeout=5)
+        if response.status_code == 200:
+            models = response.json()
+            model_names = [model.get('name', 'unknown') for model in models.get('models', [])]
+            return jsonify({
+                "ok": True, 
+                "provider": "ollama", 
+                "models": model_names,
+                "info": f"{len(model_names)} modèles disponibles"
+            })
+        else:
+            return jsonify({
+                "ok": False, 
+                "provider": "ollama", 
+                "info": f"Ollama HTTP {response.status_code}"
+            })
+    except requests.exceptions.ConnectionError:
+        return jsonify({
+            "ok": False, 
+            "provider": "ollama", 
+            "info": "Ollama non accessible (non démarré?)"
+        })
+    except Exception as e:
+        logger.error(f"LLM health check error: {e}")
+        return jsonify({
+            "ok": False, 
+            "provider": "unknown", 
+            "info": f"Erreur: {str(e)}"
+        })
 
 
 @app.route("/api/upload", methods=["POST"])
 def upload_file():
-    """Handle document upload and full analysis pipeline."""
-    uploaded = request.files.get("file")
-    if not uploaded:
-        return jsonify({"error": "no file"}), 400
-    use_ai = request.form.get("use_ai", "false").lower() == "true"
-    use_advanced_analysis = request.form.get("use_advanced", "false").lower() == "true"
-    minutes = int(request.form.get("session_minutes", 0))
-    from datetime import date
-    from services.tempfiles import safe_save_upload, safe_unlink
-
-    suffix = Path(uploaded.filename).suffix or ".bin"
-    tmp_path = safe_save_upload(uploaded, suffix)
-    
+    """Handle document upload and full analysis pipeline - with robust error handling"""
     try:
-        # Use advanced document analysis if requested
-        if use_advanced_analysis:
-            from services.advanced_document_analysis import advanced_document_analyzer
+        uploaded = request.files.get("file")
+        if not uploaded:
+            logger.warning("Upload attempt without file")
+            return jsonify({"ok": False, "error": "no file"}), 400
             
-            analysis_result = advanced_document_analyzer.analyze_document(
+        if not uploaded.filename:
+            logger.warning("Upload attempt with empty filename")
+            return jsonify({"ok": False, "error": "empty filename"}), 400
+            
+        logger.info(f"Processing upload: {uploaded.filename}")
+        
+        use_ai = request.form.get("use_ai", "false").lower() == "true"
+        use_advanced_analysis = request.form.get("use_advanced", "false").lower() == "true"
+        minutes = int(request.form.get("session_minutes", 0))
+        from datetime import date
+        from services.tempfiles import safe_save_upload, safe_unlink
+
+        suffix = Path(uploaded.filename).suffix or ".bin"
+        tmp_path = safe_save_upload(uploaded, suffix)
+        
+        try:
+            # Use advanced document analysis if requested
+            if use_advanced_analysis:
+                from services.advanced_document_analysis import advanced_document_analyzer
+                
+                analysis_result = advanced_document_analyzer.analyze_document(
                 tmp_path.as_posix(), uploaded.filename
             )
             
@@ -158,78 +228,87 @@ def upload_file():
                         "concept_map": analysis_result.get("concept_map", {}),
                         "educational_insights": analysis_result.get("educational_insights", {})
                     }
+            else:
+                # Fallback to original text extraction
+                text = extract_text(tmp_path.as_posix(), uploaded.filename)
+                advanced_metadata = {}
+                
+        finally:
+            safe_unlink(tmp_path)
+
+        db = load_db()
+        seed_items = [{"kind": "card", "payload": c} for c in db.get("cards", [])]
+        seed_items += [{"kind": "exercise", "payload": e} for e in db.get("exercises", [])]
+        seed_seen_hashes(seed_items)
+
+        offline_drafts = analyze_offline(text)
+        drafts = offline_drafts
+        if use_ai and os.getenv("OPENAI_API_KEY"):
+            context = get_context(text)
+            combined = "\n".join(context) + "\n\n" + text if context else text
+            ai_drafts = analyze_text(combined, "upload")
+            drafts = validate_items(offline_drafts + ai_drafts)
         else:
-            # Fallback to original text extraction
-            text = extract_text(tmp_path.as_posix(), uploaded.filename)
-            advanced_metadata = {}
+            drafts = validate_items(offline_drafts)
+
+        for d in drafts:
+            d.setdefault("status", "new")
             
-    finally:
-        safe_unlink(tmp_path)
+            # Enrich with advanced analysis metadata if available
+            if advanced_metadata:
+                d.setdefault("advanced_metadata", {})
+                d["advanced_metadata"].update(advanced_metadata)
 
-    db = load_db()
-    seed_items = [{"kind": "card", "payload": c} for c in db.get("cards", [])]
-    seed_items += [{"kind": "exercise", "payload": e} for e in db.get("exercises", [])]
-    seed_seen_hashes(seed_items)
+        db["drafts"].extend(drafts)
+        for d in drafts:
+            payload = d.get("payload", {})
+            if d.get("kind") == "card":
+                payload.setdefault("id", d.get("id"))
+                payload.setdefault(
+                    "srs",
+                    {"EF": 2.5, "interval": 1, "reps": 0, "due": date.today().isoformat()},
+                )
+                db.setdefault("cards", []).append(payload)
+            elif d.get("kind") == "exercise":
+                db.setdefault("exercises", []).append(payload)
+            elif d.get("kind") == "course":
+                db.setdefault("courses", []).append(payload)
+        save_db(db)
 
-    offline_drafts = analyze_offline(text)
-    drafts = offline_drafts
-    if use_ai and os.getenv("OPENAI_API_KEY"):
-        context = get_context(text)
-        combined = "\n".join(context) + "\n\n" + text if context else text
-        ai_drafts = analyze_text(combined, "upload")
-        drafts = validate_items(offline_drafts + ai_drafts)
-    else:
-        drafts = validate_items(offline_drafts)
-
-    for d in drafts:
-        d.setdefault("status", "new")
+        plan = generate_plan(db.get("drafts", []))
+        themes = list({d.get("payload", {}).get("theme", "Général") for d in drafts})
+        due = due_cards(db)
         
-        # Enrich with advanced analysis metadata if available
-        if advanced_metadata:
-            d.setdefault("advanced_metadata", {})
-            d["advanced_metadata"].update(advanced_metadata)
-
-    db["drafts"].extend(drafts)
-    for d in drafts:
-        payload = d.get("payload", {})
-        if d.get("kind") == "card":
-            payload.setdefault("id", d.get("id"))
-            payload.setdefault(
-                "srs",
-                {"EF": 2.5, "interval": 1, "reps": 0, "due": date.today().isoformat()},
-            )
-            db.setdefault("cards", []).append(payload)
-        elif d.get("kind") == "exercise":
-            db.setdefault("exercises", []).append(payload)
-        elif d.get("kind") == "course":
-            db.setdefault("courses", []).append(payload)
-    save_db(db)
-
-    plan = generate_plan(db.get("drafts", []))
-    themes = list({d.get("payload", {}).get("theme", "Général") for d in drafts})
-    due = due_cards(db)
-    
-    response_data = {
-        "saved": len(drafts),
-        "plan": plan,
-        "themes": themes,
-        "due": due,
-        "minutes": minutes,
-    }
-    
-    # Include advanced analysis results if available
-    if advanced_metadata:
-        response_data["advanced_analysis"] = {
-            "document_type": advanced_metadata.get("document_metadata", {}).get("document_type"),
-            "complexity_score": advanced_metadata.get("document_metadata", {}).get("complexity_score"),
-            "reading_level": advanced_metadata.get("document_metadata", {}).get("reading_level"),
-            "formula_count": len(advanced_metadata.get("formulas", [])),
-            "learning_objectives": advanced_metadata.get("learning_objectives", []),
-            "estimated_study_time": advanced_metadata.get("educational_insights", {}).get("estimated_study_time", 0),
-            "recommendations": advanced_metadata.get("educational_insights", {}).get("learning_recommendations", [])
+        response_data = {
+            "saved": len(drafts),
+            "plan": plan,
+            "themes": themes,
+            "due": due,
+            "minutes": minutes,
         }
-    
-    return jsonify(response_data)
+        
+        # Include advanced analysis results if available
+        if advanced_metadata:
+            response_data["advanced_analysis"] = {
+                "document_type": advanced_metadata.get("document_metadata", {}).get("document_type"),
+                "complexity_score": advanced_metadata.get("document_metadata", {}).get("complexity_score"),
+                "reading_level": advanced_metadata.get("document_metadata", {}).get("reading_level"),
+                "formula_count": len(advanced_metadata.get("formulas", [])),
+                "learning_objectives": advanced_metadata.get("learning_objectives", []),
+                "estimated_study_time": advanced_metadata.get("educational_insights", {}).get("estimated_study_time", 0),
+                "recommendations": advanced_metadata.get("educational_insights", {}).get("learning_recommendations", [])
+            }
+        
+        logger.info(f"Upload successful: {len(drafts)} items generated from {uploaded.filename}")
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Upload error: {str(e)}", exc_info=True)
+        return jsonify({
+            "ok": False, 
+            "error": f"Upload processing failed: {str(e)}", 
+            "filename": uploaded.filename if uploaded else "unknown"
+        }), 500
 
 
 @app.route("/api/offline/analyze", methods=["POST"])
@@ -1124,5 +1203,48 @@ def index():
     return render_template("index.html")
 
 
+def find_available_port(start_port=5000, max_port=5010):
+    """Find an available port starting from start_port"""
+    import socket
+    for port in range(start_port, max_port + 1):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind(('127.0.0.1', port))
+                return port
+        except OSError:
+            continue
+    raise RuntimeError(f"No available port found between {start_port} and {max_port}")
+
+
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=int(os.getenv("PORT", 5000)), debug=True)
+    try:
+        # Tentative de port auto
+        desired_port = int(os.getenv("PORT", 5000))
+        try:
+            # Test si le port désiré est libre
+            import socket
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind(('127.0.0.1', desired_port))
+            port = desired_port
+        except OSError:
+            # Port occupé, chercher un port libre
+            logger.warning(f"Port {desired_port} occupé, recherche d'un port libre...")
+            port = find_available_port(desired_port, desired_port + 10)
+            logger.info(f"Port libre trouvé: {port}")
+        
+        host = "127.0.0.1"
+        base_url = f"http://{host}:{port}"
+        
+        logger.info(f"🚀 Study Coach démarré sur {base_url}")
+        logger.info("📋 Endpoints disponibles:")
+        logger.info(f"  • Interface: {base_url}")
+        logger.info(f"  • Health: {base_url}/api/health") 
+        logger.info(f"  • LLM Health: {base_url}/api/health/llm")
+        logger.info(f"  • Upload: {base_url}/api/upload")
+        
+        app.run(host=host, port=port, debug=os.getenv("DEBUG", "1") == "1")
+        
+    except Exception as e:
+        logger.error(f"Erreur de démarrage: {e}")
+        print(f"❌ Impossible de démarrer l'application: {e}")
+        sys.exit(1)

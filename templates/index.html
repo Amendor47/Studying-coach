@@ -1,90 +1,131 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Coach de Révision</title>
-    <meta name="color-scheme" content="light dark" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Study Coach — Minimal</title>
+  <meta name="color-scheme" content="dark light" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
-    <header class="topbar">
-        <h1 class="logo">Coach de Révision</h1>
-        <nav class="tabs" role="tablist">
-            <button class="tab active" data-tab="import" role="tab">Importer</button>
-            <button class="tab" data-tab="courses" role="tab">Fiches de cours</button>
-            <button class="tab" data-tab="flash" role="tab">Flashcards</button>
-            <button class="tab" data-tab="exercises" role="tab">Exercices</button>
-            <button class="tab" data-tab="chat" role="tab">Chat</button>
-        </nav>
-    </header>
-
-    <main class="wrapper">
-        <section id="import" class="panel active" role="tabpanel">
+  <div class="bg-grid"></div>
+  <header class="topbar">
+    <div class="brand">
+      <img src="{{ url_for('static', filename='logo.svg') }}" alt="" class="logo" />
+      <span class="title">Study Coach</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="import" role="tab">Importer</button>
+      <button class="tab" data-tab="courses" role="tab">Cours</button>
+      <button class="tab" data-tab="flash" role="tab">Révisions</button>
+      <button class="tab" data-tab="exercises" role="tab">Exercices</button>
+      <button class="tab" data-tab="web" role="tab">Web</button>
+      <button class="tab" data-tab="settings" role="tab">Paramètres</button>
+    </nav>
+  </header>
+  <section class="hero">
+    <div class="wrapper hero-inner">
+      <h1 class="h1">Designed for focus</h1>
+      <p class="sub">Un coach d’étude local, rapide et privé. Noir & blanc, lisible, efficace.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#import">Commencer</a>
+        <a class="btn btn-ghost" href="#web">Recherche web</a>
+      </div>
+    </div>
+  </section>
+  <main class="wrapper stack">
+    <section id="import" class="panel active" role="tabpanel">
+      <div class="panel-head">
+        <h2>Importer un cours</h2>
+        <p class="muted">PDF, DOCX, TXT ou Markdown. Analyser hors-IA ou améliorer via IA.</p>
+      </div>
+      <div class="card-grid">
+        <div class="card">
+          <label class="file">
             <input type="file" id="file-input" accept=".txt,.md,.pdf,.docx" />
-            <select id="session-minutes">
-                <option value="10">10 min</option>
-                <option value="25">25 min</option>
-                <option value="45">45 min</option>
-                <option value="60">1 h</option>
-                <option value="120">2 h</option>
-                <option value="180">3 h</option>
+            <span>Glisser-déposer ou cliquer pour choisir</span>
+          </label>
+          <div class="row">
+            <select id="session-minutes" class="select">
+              <option value="25">25 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 h</option>
+              <option value="120">2 h</option>
+              <option value="180">3 h</option>
             </select>
-            <label><input type="checkbox" id="use-ai-upload" /> IA</label>
-            <button id="upload-btn">Envoyer</button>
-
-            <textarea id="source-text" placeholder="Colle ton texte ici..."></textarea>
-            <button id="analyze-btn">Analyser</button>
-            <button id="ai-btn" disabled>Améliorer via IA</button>
-
-            <div id="drafts"></div>
-
-            <div style="margin-top:.5rem">
-                <input id="web-q" placeholder="Rechercher sur le web (ex: Photosynthèse résumé)" />
-                <button id="web-search">Rechercher Web</button>
-                <label style="margin-left:.5rem"><input type="checkbox" id="web-ai" /> Enrichir via IA</label>
-            </div>
-            <div id="web-results"></div>
-        </section>
-        <section id="courses" class="panel" role="tabpanel">
-            <div id="themes"></div>
-            <div id="course-cards"></div>
-        </section>
-        <section id="flash" class="panel" role="tabpanel">
-            <div id="due-cards"></div>
-        </section>
-        <section id="exercises" class="panel" role="tabpanel">
-            <div id="exercise-list" aria-live="polite"></div>
-        </section>
-        <section id="chat" class="panel" role="tabpanel">
-            <div id="chat-log"></div>
-            <input id="chat-input" placeholder="Pose ta question..." />
-            <button id="chat-send">Envoyer</button>
-        </section>
-    </main>
-
-    <!-- Timer avec contrôles -->
-    <div class="timer" aria-live="polite">
-        <div id="timer-label">Travail</div>
-        <div id="timer">25:00</div>
-        <div style="display:flex; gap:.5rem; margin-top:.5rem;">
-            <button id="timer-start">Start</button>
-            <button id="timer-pause">Pause</button>
-            <button id="timer-resume">Reprendre</button>
-            <button id="timer-reset">Reset</button>
+            <label class="check"><input type="checkbox" id="use-ai-upload" /> <span>Améliorer via IA</span></label>
+          </div>
+          <div class="row gap">
+            <button id="upload-btn" class="btn btn-primary">Analyser le fichier</button>
+            <button id="analyze-btn" class="btn">Analyser le texte</button>
+            <button id="ai-btn" class="btn btn-ghost" disabled>Améliorer via IA</button>
+          </div>
         </div>
-    </div>
-
-    <!-- API Key modal -->
-    <div id="key-modal" class="modal hidden" role="dialog" aria-modal="true">
-        <div class="modal-content">
-            <h2>Clé API OpenAI</h2>
-            <p>Cette clé reste locale et n'est utilisée que si vous demandez l'IA.</p>
-            <input type="password" id="key-input" placeholder="sk-..." />
-            <button id="save-key">Enregistrer</button>
+        <div class="card">
+          <textarea id="source-text" placeholder="Colle ici le contenu de ton cours…"></textarea>
         </div>
+      </div>
+      <div id="drafts" class="grid-cols"></div>
+    </section>
+    <section id="courses" class="panel" role="tabpanel">
+      <div class="panel-head">
+        <h2>Cours & fiches</h2>
+        <p class="muted">Par thème, en colonnes, comme sur les sites modernes.</p>
+      </div>
+      <div id="themes" class="chips"></div>
+      <div id="course-cards" class="grid-cols"></div>
+    </section>
+    <section id="flash" class="panel" role="tabpanel">
+      <div class="panel-head">
+        <h2>Révisions (Anki-like)</h2>
+        <p class="muted">Cartes dues, progression et scoring SM-2.</p>
+      </div>
+      <div id="due-cards" class="grid-cols"></div>
+    </section>
+    <section id="exercises" class="panel" role="tabpanel">
+      <div class="panel-head">
+        <h2>Exercices</h2>
+        <p class="muted">QCM interactifs avec correction instantanée.</p>
+      </div>
+      <div id="exercise-list" class="grid-cols"></div>
+    </section>
+    <section id="web" class="panel" role="tabpanel">
+      <div class="panel-head">
+        <h2>Recherche web</h2>
+        <p class="muted">Enrichir les fiches à partir de sources en ligne.</p>
+      </div>
+      <div class="card">
+        <div class="row">
+          <input id="web-q" class="input" placeholder="Ex : Photosynthèse résumé fiable" />
+          <label class="check"><input type="checkbox" id="web-ai" /> <span>Enrichir via IA</span></label>
+          <button id="web-search" class="btn btn-primary">Rechercher</button>
+        </div>
+        <div id="web-results" class="stack-sm"></div>
+      </div>
+    </section>
+    <section id="settings" class="panel" role="tabpanel">
+      <div class="panel-head">
+        <h2>Paramètres</h2>
+        <p class="muted">Thème, police, fournisseur LLM…</p>
+      </div>
+      <div class="card">
+        <p>À compléter selon tes options. Le style est prêt.</p>
+      </div>
+    </section>
+  </main>
+  <div id="timer" class="timer" aria-live="polite">25:00</div>
+  <div id="key-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content card">
+      <h3>Clé API OpenAI</h3>
+      <p class="muted">Stockée localement, utilisée seulement si tu choisis l’IA cloud.</p>
+      <input type="password" id="key-input" class="input" placeholder="sk-..." />
+      <div class="row end">
+        <button id="save-key" class="btn btn-primary">Enregistrer</button>
+      </div>
     </div>
-
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

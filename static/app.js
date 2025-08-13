@@ -306,7 +306,7 @@ function renderCourseCards(theme, data) {
     front.textContent = d.payload.front;
     const back = document.createElement('div');
     back.className = 'back';
-    back.textContent = d.payload.back;
+    back.textContent = d.payload.back || d.payload.answer || '';
     inner.appendChild(front);
     inner.appendChild(back);
     card.appendChild(inner);
@@ -385,7 +385,7 @@ function renderDueCards(list) {
     front.textContent = c.front;
     const back = document.createElement('div');
     back.className = 'back';
-    back.textContent = c.back;
+    back.textContent = c.back || c.answer || '';
     inner.appendChild(front);
     inner.appendChild(back);
     card.appendChild(inner);

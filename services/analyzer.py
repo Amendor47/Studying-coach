@@ -70,11 +70,11 @@ def _keywords(text: str, top: int = 3) -> List[str]:
     return [w for w, _ in freq.most_common(top)]
 
 
-def _extract_pairs(text: str) -> List[Tuple[str, str, str]]:
-    """Return list of (theme, term, definition) triples."""
+def _extract_pairs(sections: List[Tuple[str, str]]) -> List[Tuple[str, str, str]]:
+    """Return list of (theme, term, definition) triples from parsed sections."""
 
     pairs: List[Tuple[str, str, str]] = []
-    for theme, para in _sections(text):
+    for theme, para in sections:
         lines = [l.strip() for l in para.splitlines() if l.strip()]
         for line in lines:
             m = re.match(r"(.+?)[\s]*[:\-][\s]*(.+)", line)
@@ -84,6 +84,34 @@ def _extract_pairs(text: str) -> List[Tuple[str, str, str]]:
                 term, definition = m.groups()
                 pairs.append((theme, term.strip(), definition.strip()))
     return pairs
+
+
+def _build_courses(sections: List[Tuple[str, str]]) -> List[Dict]:
+    """Create course items summarising each theme."""
+    grouped: Dict[str, List[str]] = {}
+    for theme, para in sections:
+        grouped.setdefault(theme, []).append(para)
+
+    courses: List[Dict] = []
+    for idx, (theme, paras) in enumerate(grouped.items()):
+        text = " ".join(paras)
+        sentences = [s.strip() for s in re.split(r"[.!?]", text) if s.strip()]
+        summary = " ".join(sentences[:2])[:MAX_VERSO_CHARS]
+        bullets = sentences[:4]
+        courses.append(
+            {
+                "id": f"course{idx}",
+                "kind": "course",
+                "payload": {
+                    "title": theme,
+                    "summary": summary,
+                    "bullets": bullets,
+                    "keywords": _keywords(text, top=5),
+                    "theme": theme,
+                },
+            }
+        )
+    return courses
 
 
 def _build_drafts(pairs: List[Tuple[str, str, str]]) -> List[Dict]:
@@ -167,6 +195,8 @@ def _build_drafts(pairs: List[Tuple[str, str, str]]) -> List[Dict]:
 
 def analyze_offline(text: str) -> List[Dict]:
     """Analyze text and return validated draft items."""
-    pairs = _extract_pairs(text)
+    sections = _sections(text)
+    pairs = _extract_pairs(sections)
     drafts = _build_drafts(pairs)
+    drafts += _build_courses(sections)
     return validate_items(drafts)

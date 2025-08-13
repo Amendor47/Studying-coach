@@ -8,6 +8,15 @@ const webQ = document.getElementById('web-q');
 const webSearchBtn = document.getElementById('web-search');
 const webAI = document.getElementById('web-ai');
 const webResults = document.getElementById('web-results');
+let sessionLimit = null;
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -28,6 +37,9 @@ for (const tab of tabs) {
     }
     if (tab.dataset.tab === 'flash') {
       loadDueCards();
+    }
+    if (tab.dataset.tab === 'exercises') {
+      loadExercises();
     }
   });
 }
@@ -62,6 +74,7 @@ async function renderDrafts(list) {
         body: JSON.stringify({ items: [d] })
       });
       accept.disabled = true;
+      toast('✅ Ajouté (Flashcards > dues)');
     };
     const reject = document.createElement('button');
     reject.textContent = 'Rejeter';
@@ -94,7 +107,10 @@ uploadBtn.addEventListener('click', async () => {
   form.append('session_minutes', document.getElementById('session-minutes').value);
   const resp = await fetch('/api/upload', { method: 'POST', body: form });
   const data = await resp.json();
-  alert(`Fiches sauvegardées: ${data.saved}`);
+  toast(`✅ ${data.saved} fiches ajoutées`);
+  sessionLimit = Math.min(Math.ceil((data.minutes || 0) / 1.5), data.due.length);
+  document.querySelector('.tab[data-tab="flash"]').click();
+  loadDueCards();
 });
 
 aiBtn.addEventListener('click', async () => {
@@ -149,7 +165,7 @@ function renderThemes(themes) {
   container.innerHTML = '';
   themes.forEach(t => {
     const btn = document.createElement('button');
-    btn.textContent = `${t.name} (${t.count})`;
+    btn.textContent = `${t.name} (${t.cards}/${t.exercises})`;
     btn.onclick = () => loadCourseCards(t.name);
     container.appendChild(btn);
   });
@@ -158,18 +174,36 @@ function renderThemes(themes) {
 async function loadCourseCards(theme) {
   const resp = await fetch(`/api/fiches/${encodeURIComponent(theme)}`);
   const data = await resp.json();
-  renderCourseCards(theme, data.fiches);
+  renderCourseCards(theme, data);
 }
 
-function renderCourseCards(theme, list) {
+function renderCourseCards(theme, data) {
   const container = document.getElementById('course-cards');
   container.innerHTML = '';
-  if (!list.length) {
+  const { cards = [], courses = [], exercises = [] } = data;
+  if (!cards.length && !courses.length && !exercises.length) {
     container.textContent = 'Aucune fiche.';
     return;
   }
-  list.forEach(d => {
-    if (d.kind !== 'card') return;
+  courses.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'course-item';
+    const title = document.createElement('h3');
+    title.textContent = c.payload.title;
+    const summary = document.createElement('p');
+    summary.textContent = c.payload.summary;
+    const ul = document.createElement('ul');
+    (c.payload.bullets || []).forEach(b => {
+      const li = document.createElement('li');
+      li.textContent = b;
+      ul.appendChild(li);
+    });
+    div.appendChild(title);
+    div.appendChild(summary);
+    div.appendChild(ul);
+    container.appendChild(div);
+  });
+  cards.forEach(d => {
     const card = document.createElement('div');
     card.className = 'flashcard';
     const inner = document.createElement('div');
@@ -191,7 +225,6 @@ function renderCourseCards(theme, list) {
       card.classList.toggle('flip');
       elab.style.display = card.classList.contains('flip') ? 'block' : 'none';
     });
-
     const actions = document.createElement('div');
     const elaborer = document.createElement('button');
     elaborer.textContent = 'Élaborer';
@@ -205,11 +238,20 @@ function renderCourseCards(theme, list) {
     actions.appendChild(elaborer);
     actions.appendChild(ok);
     actions.appendChild(again);
-
     container.appendChild(card);
     container.appendChild(elab);
     container.appendChild(actions);
   });
+  if (exercises.length) {
+    const exDiv = document.createElement('div');
+    const title = document.createElement('h3');
+    title.textContent = 'Exercices';
+    const inner = document.createElement('div');
+    exDiv.appendChild(title);
+    exDiv.appendChild(inner);
+    container.appendChild(exDiv);
+    renderExercises(exercises, inner);
+  }
 }
 
 async function updateStatus(id, status) {
@@ -225,12 +267,16 @@ async function updateStatus(id, status) {
 async function loadDueCards() {
   const resp = await fetch('/api/due');
   const data = await resp.json();
-  renderDueCards(data.cards);
+  let list = data.cards;
+  if (sessionLimit) {
+    list = list.slice(0, sessionLimit);
+  }
+  renderDueCards(list);
 }
 
 function renderDueCards(list) {
   const container = document.getElementById('due-cards');
-  container.innerHTML = '';
+    container.innerHTML = '';
   if (!list.length) {
     container.textContent = 'Aucune carte à réviser.';
     return;
@@ -270,6 +316,55 @@ function renderDueCards(list) {
     container.appendChild(card);
     container.appendChild(elab);
     container.appendChild(actions);
+  });
+}
+
+async function loadExercises() {
+  const resp = await fetch('/api/due');
+  const data = await resp.json();
+  renderExercises(data.exercises);
+}
+
+function renderExercises(list, targetDiv) {
+  const container = targetDiv || document.getElementById('exercise-list');
+  container.innerHTML = '';
+  if (!list.length) {
+    container.textContent = 'Aucun exercice.';
+    return;
+  }
+  list.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'exercise';
+    const q = document.createElement('p');
+    q.textContent = e.q || e.recto || '';
+    div.appendChild(q);
+    if (e.type === 'QCM') {
+      e.options.forEach(opt => {
+        const label = document.createElement('label');
+        const inp = document.createElement('input');
+        inp.type = 'radio';
+        inp.name = 'qcm' + i;
+        label.appendChild(inp);
+        label.append(opt);
+        div.appendChild(label);
+      });
+      const btn = document.createElement('button');
+      btn.textContent = 'Vérifier';
+      btn.onclick = () => {
+        const sel = div.querySelector('input[type=radio]:checked');
+        const val = sel ? sel.nextSibling.textContent : '';
+        alert(val === e.answer ? 'Correct' : `Faux: ${e.answer}`);
+      };
+      div.appendChild(btn);
+    } else {
+      const inp = document.createElement('input');
+      const btn = document.createElement('button');
+      btn.textContent = 'Correction';
+      btn.onclick = () => alert(`Réponse: ${e.answer}`);
+      div.appendChild(inp);
+      div.appendChild(btn);
+    }
+    container.appendChild(div);
   });
 }
 

@@ -218,6 +218,39 @@ button:hover:not(:disabled) {
     text-align: center;
 }
 
+.exercise {
+    margin: .5rem 0;
+    padding: .5rem;
+    border: 1px solid #ccc;
+    border-radius: var(--radius);
+    background: rgba(255,255,255,0.8);
+}
+
+.course-item {
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+    background: rgba(255,255,255,0.8);
+}
+
+.toast {
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: white;
+    padding: .5rem 1rem;
+    border-radius: var(--radius);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: fadein .3s;
+}
+
+@keyframes fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 @media (min-width: 600px) {
     #course-cards {
         flex-direction: row;

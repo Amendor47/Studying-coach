@@ -20,6 +20,7 @@
 
     <main class="wrapper">
         <section id="import" class="panel active" role="tabpanel">
+            <label for="file-input">Fichier</label>
             <input type="file" id="file-input" accept=".txt,.md,.pdf,.docx" />
             <select id="session-minutes">
                 <option value="10">10 min</option>
@@ -31,13 +32,13 @@
             <textarea id="source-text" placeholder="Colle ton texte ici..."></textarea>
             <button id="analyze-btn">Analyser</button>
             <button id="ai-btn" disabled>Améliorer via IA</button>
-            <div id="drafts"></div>
+            <div id="drafts" aria-live="polite"></div>
             <div style="margin-top:.5rem">
                 <input id="web-q" placeholder="Rechercher sur le web (ex: Photosynthèse résumé)" />
                 <button id="web-search">Rechercher Web</button>
                 <label style="margin-left:.5rem"><input type="checkbox" id="web-ai" /> Enrichir via IA</label>
             </div>
-            <div id="web-results"></div>
+            <div id="web-results" aria-live="polite"></div>
         </section>
         <section id="courses" class="panel" role="tabpanel">
             <div id="themes"></div>
@@ -47,7 +48,7 @@
             <div id="due-cards"></div>
         </section>
         <section id="exercises" class="panel" role="tabpanel">
-            <p>Aucun exercice pour l'instant.</p>
+            <div id="exercise-list" aria-live="polite"></div>
         </section>
     </main>
 

@@ -174,7 +174,7 @@ def plan_route():
 def due_route():
     db = load_db()
     cards = due_cards(db)
-    exercises = build_exercises_from_cards(cards)
+    exercises = db.get("exercises", []) + build_exercises_from_cards(cards)
     return jsonify({"cards": cards, "exercises": exercises})
 
 
@@ -195,19 +195,33 @@ def review_route(cid: str):
 def themes_route():
     """Return available themes and counts."""
     db = load_db()
-    counts: Dict[str, int] = {}
+    counts: Dict[str, Dict[str, int]] = {}
     for d in db.get("drafts", []):
         theme = d.get("payload", {}).get("theme", "Général")
-        counts[theme] = counts.get(theme, 0) + 1
-    themes = [{"name": t, "count": c} for t, c in sorted(counts.items())]
+        entry = counts.setdefault(theme, {"cards": 0, "exercises": 0})
+        if d.get("kind") == "card":
+            entry["cards"] += 1
+        elif d.get("kind") == "exercise":
+            entry["exercises"] += 1
+    themes = [
+        {"name": t, "cards": v["cards"], "exercises": v["exercises"]}
+        for t, v in sorted(counts.items())
+    ]
     return jsonify({"themes": themes})
 
 
 @app.route("/api/fiches/<theme>", methods=["GET"])
 def fiches_by_theme(theme: str):
     db = load_db()
-    items = [d for d in db.get("drafts", []) if d.get("payload", {}).get("theme", "Général") == theme]
-    return jsonify({"fiches": items})
+    items = [
+        d
+        for d in db.get("drafts", [])
+        if d.get("payload", {}).get("theme", "Général") == theme
+    ]
+    cards = [d for d in items if d.get("kind") == "card"]
+    exercises = [d for d in items if d.get("kind") == "exercise"]
+    courses = [d for d in items if d.get("kind") == "course"]
+    return jsonify({"cards": cards, "exercises": exercises, "courses": courses})
 
 
 @app.route("/api/card/<cid>/status", methods=["POST"])
@@ -230,11 +244,15 @@ def export_route(fmt: str):
     if fmt == "csv":
         buf = io.StringIO()
         writer = csv.writer(buf, delimiter=";")
-        writer.writerow(["front", "back", "theme"])
+        writer.writerow(["front", "back", "tags"])
         for c in cards:
             writer.writerow([c.get("front"), c.get("back"), c.get("theme", "")])
         buf.seek(0)
-        return Response(buf.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=fiches.csv"})
+        return Response(
+            buf.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=fiches.csv"},
+        )
     if fmt == "pdf":
         try:
             from reportlab.lib.pagesizes import letter

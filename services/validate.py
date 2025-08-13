@@ -127,6 +127,13 @@ def validate_exercise(ex: Dict) -> None:
     seen_hashes.add(h)
 
 
+def validate_course(course: Dict) -> None:
+    title = course.get("title")
+    summary = course.get("summary")
+    if not isinstance(title, str) or not isinstance(summary, str):
+        raise ValidationError("invalid course")
+
+
 def validate_items(items: List[Dict]) -> List[Dict]:
     global seen_hashes
     seen_hashes = set()
@@ -139,6 +146,8 @@ def validate_items(items: List[Dict]) -> List[Dict]:
                 validate_card(payload)
             elif kind == "exercise":
                 validate_exercise(payload)
+            elif kind == "course":
+                validate_course(payload)
             else:
                 raise ValidationError("unknown kind")
         except ValidationError:

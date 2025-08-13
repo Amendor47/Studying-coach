@@ -1,0 +1,5 @@
+.flashcard { perspective: 1000px; width: 300px; height: 180px; margin: auto; }
+.flashcard .inner { transition: transform .6s; transform-style: preserve-3d; position: relative; width: 100%; height: 100%; }
+.flashcard.flip .inner { transform: rotateY(180deg); }
+.flashcard .front, .flashcard .back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px; padding: 1rem; }
+.flashcard .back { transform: rotateY(180deg); background: #ececec; }

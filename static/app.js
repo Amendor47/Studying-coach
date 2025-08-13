@@ -180,48 +180,98 @@ function renderDrafts(list, meta) {
 
 btn.addEventListener('click', async () => {
   const text = document.getElementById('source-text').value;
-  const resp = await fetch('/api/offline/analyze', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
-  });
-  const data = await resp.json();
-  renderDrafts(data.drafts, data.meta);
+  if (!text.trim()) {
+    toast('⚠️ Veuillez saisir du texte à analyser');
+    return;
+  }
+  try {
+    const resp = await fetch('/api/offline/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    if (!resp.ok) {
+      throw new Error(`Erreur ${resp.status}: ${resp.statusText}`);
+    }
+    const data = await resp.json();
+    renderDrafts(data.drafts, data.meta);
+  } catch (error) {
+    toast(`❌ Erreur d'analyse: ${error.message}`);
+    console.error('Analysis error:', error);
+  }
 });
 
 uploadBtn.addEventListener('click', async () => {
   const fileInput = document.getElementById('file-input');
   const file = fileInput.files[0];
-  if (!file) return;
-  const form = new FormData();
-  form.append('file', file);
-  form.append('use_ai', document.getElementById('use-ai-upload').checked);
-  form.append('session_minutes', document.getElementById('session-minutes').value);
-  const resp = await fetch('/api/upload', { method: 'POST', body: form });
-  const data = await resp.json();
-  toast(`✅ ${data.saved} fiches ajoutées`);
-  sessionLimit = Math.min(Math.ceil((data.minutes || 0) / 1.5), data.due.length);
-  document.querySelector('.tab[data-tab="flash"]').click();
-  loadDueCards();
+  if (!file) {
+    toast('⚠️ Veuillez sélectionner un fichier');
+    return;
+  }
+  try {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Analyse...';
+    const form = new FormData();
+    form.append('file', file);
+    form.append('use_ai', document.getElementById('use-ai-upload').checked);
+    form.append('session_minutes', document.getElementById('session-minutes').value);
+    const resp = await fetch('/api/upload', { method: 'POST', body: form });
+    if (!resp.ok) {
+      throw new Error(`Erreur ${resp.status}: ${resp.statusText}`);
+    }
+    const data = await resp.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    toast(`✅ ${data.saved} fiches ajoutées`);
+    sessionLimit = Math.min(Math.ceil((data.minutes || 0) / 1.5), data.due.length);
+    document.querySelector('.tab[data-tab="flash"]').click();
+    loadDueCards();
+  } catch (error) {
+    toast(`❌ Erreur d'upload: ${error.message}`);
+    console.error('Upload error:', error);
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Analyser le fichier';
+  }
 });
 
 aiBtn.addEventListener('click', async () => {
-  // Check if API key is available first
-  const configResp = await fetch('/api/config');
-  const configData = await configResp.json();
-  if (!configData.has_key) {
-    keyModal.classList.remove('hidden');
+  const text = document.getElementById('source-text').value;
+  if (!text.trim()) {
+    toast('⚠️ Veuillez saisir du texte à analyser');
     return;
   }
   
-  const text = document.getElementById('source-text').value;
-  const resp = await fetch('/api/ai/analyze', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, force: true, reason: 'user' })
-  });
-  const data = await resp.json();
-  renderDrafts(data.drafts, data.meta);
+  try {
+    // Check if API key is available first
+    const configResp = await fetch('/api/config');
+    const configData = await configResp.json();
+    if (!configData.has_key) {
+      keyModal.classList.remove('hidden');
+      return;
+    }
+    
+    aiBtn.disabled = true;
+    aiBtn.textContent = 'Analyse IA...';
+    
+    const resp = await fetch('/api/ai/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, force: true, reason: 'user' })
+    });
+    if (!resp.ok) {
+      throw new Error(`Erreur ${resp.status}: ${resp.statusText}`);
+    }
+    const data = await resp.json();
+    renderDrafts(data.drafts, data.meta);
+  } catch (error) {
+    toast(`❌ Erreur d'analyse IA: ${error.message}`);
+    console.error('AI analysis error:', error);
+  } finally {
+    aiBtn.disabled = false;
+    aiBtn.textContent = 'Améliorer via IA';
+  }
 });
 
 webSearchBtn?.addEventListener('click', async () => {

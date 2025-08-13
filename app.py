@@ -3,6 +3,15 @@ import io
 import csv
 import os
 import sys
+from pathlib import Path
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # dotenv not installed, skip automatic .env loading
+    pass
 
 from services.analyzer import analyze_offline
 from services.heuristics import ai_needed, readability, density

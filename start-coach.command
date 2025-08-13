@@ -7,11 +7,24 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "[!] Python3 requis. Installez via https://www.python.org/downloads/"; exit 1
 fi
 
-# Setup virtual environment
-if [ ! -d ".venv" ]; then python3 -m venv .venv; fi
-source .venv/bin/activate
-pip install --upgrade pip >/dev/null
-if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install flask openai python-docx pdfminer.six python-dotenv pyyaml requests; fi
+# Check if Flask is available system-wide first
+if python3 -c "import flask, yaml, requests, dotenv" 2>/dev/null; then
+  echo "Using system packages (all dependencies found)"
+  USE_SYSTEM=true
+else
+  echo "Installing dependencies in virtual environment..."
+  USE_SYSTEM=false
+  # Setup virtual environment
+  if [ ! -d ".venv" ]; then python3 -m venv .venv; fi
+  source .venv/bin/activate
+  pip install --upgrade pip --timeout=30 >/dev/null 2>&1 || echo "Warning: Could not upgrade pip"
+  # Try minimal install first
+  pip install flask python-dotenv pyyaml requests --timeout=30 >/dev/null 2>&1 || {
+    echo "Warning: Could not install all packages. Attempting to use system packages."
+    USE_SYSTEM=true
+    deactivate
+  }
+fi
 
 # Create settings-local.yaml with Ollama defaults if missing
 if [ ! -f "settings-local.yaml" ]; then

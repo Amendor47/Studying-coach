@@ -73,8 +73,8 @@ function fmt(sec) {
 }
 
 function updateDisplay() {
-  timerEl.textContent = fmt(remaining);
-  labelEl.textContent = mode === 'work' ? 'Travail' : 'Pause';
+  if (timerEl) timerEl.textContent = fmt(remaining);
+  if (labelEl) labelEl.textContent = mode === 'work' ? 'Travail' : 'Pause';
 }
 
 function switchMode(next) {
@@ -115,31 +115,37 @@ function startTick() {
   }, 1000);
 }
 
-startBtn.addEventListener('click', () => {
-  stopTick();
-  targetMinutes = parseInt(sessionSel.value || '25', 10);
-  elapsedTotal = 0;
-  mode = 'work';
-  remaining = WORK_BLOCK_MIN * 60;
-  updateDisplay();
-  startTick();
-});
+if (startBtn) {
+  startBtn.addEventListener('click', () => {
+    stopTick();
+    targetMinutes = parseInt(sessionSel.value || '25', 10);
+    elapsedTotal = 0;
+    mode = 'work';
+    remaining = WORK_BLOCK_MIN * 60;
+    updateDisplay();
+    startTick();
+  });
+}
 
-pauseBtn.addEventListener('click', () => stopTick());
-resumeBtn.addEventListener('click', () => startTick());
-resetBtn.addEventListener('click', () => {
-  stopTick();
-  elapsedTotal = 0;
-  mode = 'work';
-  remaining = WORK_BLOCK_MIN * 60;
-  updateDisplay();
-});
+if (pauseBtn) pauseBtn.addEventListener('click', () => stopTick());
+if (resumeBtn) resumeBtn.addEventListener('click', () => startTick());
+if (resetBtn) {
+  resetBtn.addEventListener('click', () => {
+    stopTick();
+    elapsedTotal = 0;
+    mode = 'work';
+    remaining = WORK_BLOCK_MIN * 60;
+    updateDisplay();
+  });
+}
 
-sessionSel.addEventListener('change', () => {
-  targetMinutes = parseInt(sessionSel.value || '25', 10);
-});
+if (sessionSel) {
+  sessionSel.addEventListener('change', () => {
+    targetMinutes = parseInt(sessionSel.value || '25', 10);
+  });
+}
 
-updateDisplay();
+if (timerEl) updateDisplay();
 
 // offline analyze
 const btn = document.getElementById('analyze-btn');
@@ -179,43 +185,49 @@ function renderDrafts(list, meta) {
   });
 }
 
-btn.addEventListener('click', async () => {
-  const text = document.getElementById('source-text').value;
-  const resp = await fetch('/api/offline/analyze', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
+if (btn) {
+  btn.addEventListener('click', async () => {
+    const text = document.getElementById('source-text').value;
+    const resp = await fetch('/api/offline/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await resp.json();
+    renderDrafts(data.drafts, data.meta);
   });
-  const data = await resp.json();
-  renderDrafts(data.drafts, data.meta);
-});
+}
 
-uploadBtn.addEventListener('click', async () => {
-  const fileInput = document.getElementById('file-input');
-  const file = fileInput.files[0];
-  if (!file) return;
-  const form = new FormData();
-  form.append('file', file);
-  form.append('use_ai', document.getElementById('use-ai-upload').checked);
-  form.append('session_minutes', document.getElementById('session-minutes').value);
-  const resp = await fetch('/api/upload', { method: 'POST', body: form });
-  const data = await resp.json();
-  toast(`✅ ${data.saved} fiches ajoutées`);
-  sessionLimit = Math.min(Math.ceil((data.minutes || 0) / 1.5), data.due.length);
-  document.querySelector('.tab[data-tab="flash"]').click();
-  loadDueCards();
-});
-
-aiBtn.addEventListener('click', async () => {
-  const text = document.getElementById('source-text').value;
-  const resp = await fetch('/api/ai/analyze', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, force: true, reason: 'user' })
+if (uploadBtn) {
+  uploadBtn.addEventListener('click', async () => {
+    const fileInput = document.getElementById('file-input');
+    const file = fileInput.files[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    form.append('use_ai', document.getElementById('use-ai-upload').checked);
+    form.append('session_minutes', document.getElementById('session-minutes').value);
+    const resp = await fetch('/api/upload', { method: 'POST', body: form });
+    const data = await resp.json();
+    toast(`✅ ${data.saved} fiches ajoutées`);
+    sessionLimit = Math.min(Math.ceil((data.minutes || 0) / 1.5), data.due.length);
+    document.querySelector('.tab[data-tab="flash"]').click();
+    loadDueCards();
   });
-  const data = await resp.json();
-  renderDrafts(data.drafts, data.meta);
-});
+}
+
+if (aiBtn) {
+  aiBtn.addEventListener('click', async () => {
+    const text = document.getElementById('source-text').value;
+    const resp = await fetch('/api/ai/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, force: true, reason: 'user' })
+    });
+    const data = await resp.json();
+    renderDrafts(data.drafts, data.meta);
+  });
+};
 
 webSearchBtn?.addEventListener('click', async () => {
   const q = (webQ.value || '').trim();

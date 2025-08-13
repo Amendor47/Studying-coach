@@ -203,6 +203,167 @@ uploadBtn.addEventListener('click', async () => {
   toast(`✅ ${data.saved} fiches ajoutées`);
   sessionLimit = Math.min(Math.ceil((data.minutes || 0) / 1.5), data.due.length);
   document.querySelector('.tab[data-tab="flash"]').click();
+});
+
+// === DRAG & DROP ROBUSTE ===
+function initializeDragAndDrop() {
+  const dropZone = document.querySelector('.file');
+  const fileInput = document.getElementById('file-input');
+  
+  if (!dropZone || !fileInput) return;
+
+  let dragCounter = 0;
+  
+  function showDropState() {
+    dropZone.style.borderColor = '#00e0b8';
+    dropZone.style.backgroundColor = 'rgba(0, 224, 184, 0.1)';
+    dropZone.querySelector('span').textContent = 'Relâcher le fichier ici';
+  }
+  
+  function hideDropState() {
+    dropZone.style.borderColor = '';
+    dropZone.style.backgroundColor = '';
+    dropZone.querySelector('span').textContent = 'Glisser-déposer ou cliquer pour choisir un fichier';
+  }
+  
+  function showUploadState() {
+    dropZone.style.borderColor = '#ffc107';
+    dropZone.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
+    dropZone.querySelector('span').textContent = '⏳ Upload en cours...';
+  }
+  
+  function showSuccessState() {
+    dropZone.style.borderColor = '#28a745';
+    dropZone.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+    dropZone.querySelector('span').textContent = '✅ Fichier uploadé avec succès';
+    setTimeout(hideDropState, 2000);
+  }
+  
+  function showErrorState(message) {
+    dropZone.style.borderColor = '#dc3545';
+    dropZone.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
+    dropZone.querySelector('span').textContent = `❌ ${message}`;
+    setTimeout(hideDropState, 3000);
+  }
+  
+  // Empêcher les comportements par défaut pour tous les événements de drag
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+  
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  // Highlight drop zone when item is dragged over it
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, function(e) {
+      if (eventName === 'dragenter') {
+        dragCounter++;
+      }
+      showDropState();
+    }, false);
+  });
+  
+  ['dragleave'].forEach(eventName => {
+    dropZone.addEventListener(eventName, function(e) {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        hideDropState();
+        dragCounter = 0;
+      }
+    }, false);
+  });
+  
+  // Handle dropped files
+  dropZone.addEventListener('drop', handleDrop, false);
+  
+  function handleDrop(e) {
+    dragCounter = 0;
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length === 0) {
+      showErrorState('Aucun fichier détecté');
+      return;
+    }
+    
+    const file = files[0];
+    
+    // Vérifier le type de fichier
+    const allowedTypes = ['.txt', '.md', '.pdf', '.docx'];
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+    
+    if (!allowedTypes.includes(fileExtension)) {
+      showErrorState(`Type de fichier non supporté: ${fileExtension}`);
+      return;
+    }
+    
+    // Vérifier la taille (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      showErrorState('Fichier trop volumineux (max 50MB)');
+      return;
+    }
+    
+    // Affecter le fichier à l'input et déclencher l'upload
+    fileInput.files = files;
+    handleFileUpload(file);
+  }
+  
+  // Fonction d'upload unifiée
+  async function handleFileUpload(file) {
+    showUploadState();
+    
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('use_ai', document.getElementById('use-ai-upload').checked);
+      form.append('session_minutes', document.getElementById('session-minutes').value);
+      
+      const resp = await fetch('/api/upload', { method: 'POST', body: form });
+      
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+      }
+      
+      const data = await resp.json();
+      
+      showSuccessState();
+      toast(`✅ ${data.saved} fiches ajoutées`);
+      
+      sessionLimit = Math.min(Math.ceil((data.minutes || 0) / 1.5), data.due.length);
+      document.querySelector('.tab[data-tab="flash"]').click();
+      
+    } catch (error) {
+      console.error('Erreur upload:', error);
+      showErrorState(error.message || 'Erreur d\'upload');
+      
+      if (window.uiErrorOverlay) {
+        window.uiErrorOverlay.show(`Erreur d'upload: ${error.message}`);
+      }
+    }
+  }
+  
+  // Également gérer le change sur l'input file pour le clic
+  fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  });
+}
+
+// Initialiser le drag & drop au chargement
+document.addEventListener('DOMContentLoaded', initializeDragAndDrop);
+
+// Réinitialiser si déjà chargé
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeDragAndDrop);
+} else {
+  initializeDragAndDrop();
+}
   loadDueCards();
 });
 

@@ -459,14 +459,32 @@
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="{{ url_for('static', filename='performance-monitor.js') }}"></script>
-  <script src="{{ url_for('static', filename='advanced-flashcards.js') }}"></script>
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <!-- Base URL configuration -->
+  <script>window.__BASE_URL__="";</script>
+  <script src="{{ url_for('static', filename='baseurl.js') }}"></script>
+  <script src="{{ url_for('static', filename='ui_error_overlay.js') }}"></script>
   
-  <!-- Service Worker Registration -->
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='performance-monitor.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='advanced-flashcards.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  
+  <!-- Service Worker Registration - DISABLED in dev -->
   <script>
+    // Désactiver le Service Worker en développement
     if ('serviceWorker' in navigator) {
+      // Unregister existing service worker
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+          console.log('Service Worker désactivé:', registration.scope);
+        }
+      });
+    }
+    
+    // Pour activer en production, décommenter:
+    /*
+    if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/static/service-worker.js')
           .then(registration => {
@@ -477,6 +495,7 @@
           });
       });
     }
+    */
   </script>
 </body>
 </html>

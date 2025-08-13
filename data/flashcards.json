@@ -1,0 +1,123 @@
+[
+  {
+    "id": "cfb5a6f5",
+    "front": "What is the capital of France?",
+    "back": "Paris is the capital city of France.",
+    "theme": "Geography",
+    "created": "2025-08-13T22:36:42.008206",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "617a07b1",
+    "front": "What is explained in this section about Machine Learning?",
+    "back": "Unsupervised Learning: This involves finding hidden patterns in data without labeled examples. Common techniques include clustering and dimensionality reduction.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904199",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "a531ad52",
+    "front": "What is explained in this section about Machine Learning?",
+    "back": "Deep Learning: A subset of machine learning based on artificial neural networks with representation learning. It can be supervised, semi-supervised, or unsupervised.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904210",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "31c47af6",
+    "front": "What is explained in this section about Machine Learning?",
+    "back": "Popular Algorithms:\nLinear Regression: Used for predicting continuous values.\nDecision Trees: Tree-like models for classification and regression.\nRandom Forest: An ensemble method that combines multiple decision trees.\nSupport Vector Machines: Effective for classification tasks with clear margins.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904217",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "a4cc1869",
+    "front": "What is Supervised Learning?",
+    "back": "This is a type of machine learning where algorithms learn from labeled training data to make predictions on new data.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904227",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "8f565c07",
+    "front": "What is Unsupervised Learning?",
+    "back": "This involves finding hidden patterns in data without labeled examples. Common techniques include clustering and dimensionality reduction.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904232",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "bcc918c9",
+    "front": "What is Deep Learning?",
+    "back": "A subset of machine learning based on artificial neural networks with representation learning. It can be supervised, semi-supervised, or unsupervised.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904236",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "7f263b8a",
+    "front": "What is Linear Regression?",
+    "back": "Used for predicting continuous values.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904242",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "a29b76b4",
+    "front": "What is Decision Trees?",
+    "back": "Tree-like models for classification and regression.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904245",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "0d0ddb4c",
+    "front": "What is Random Forest?",
+    "back": "An ensemble method that combines multiple decision trees.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904248",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  },
+  {
+    "id": "6ad4a17b",
+    "front": "What is Support Vector Machines?",
+    "back": "Effective for classification tasks with clear margins.",
+    "theme": "Machine Learning",
+    "created": "2025-08-13T22:37:53.904252",
+    "last_reviewed": "",
+    "review_count": 0,
+    "ease": 2.5,
+    "interval": 1
+  }
+]

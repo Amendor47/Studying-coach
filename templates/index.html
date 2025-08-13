@@ -140,12 +140,30 @@
       </div>
       <div class="card">
         <p>Interface prête. Branche tes options ici si besoin.</p>
+        
+        <!-- Chat Assistant -->
+        <div class="stack-sm">
+          <h3>Assistant IA</h3>
+          <div id="chat-log" class="chat-log"></div>
+          <div class="row">
+            <input id="chat-input" class="input" placeholder="Posez une question..." />
+            <button id="chat-send" class="btn btn-primary">Envoyer</button>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
   <!-- TIMER -->
-  <div id="timer" class="timer" aria-live="polite" title="Pomodoro">25:00</div>
+  <div id="timer" class="timer" aria-live="polite" title="Pomodoro">
+    <span id="timer-label">25:00</span>
+    <div class="timer-controls">
+      <button id="timer-start" class="btn-timer" title="Start">▶</button>
+      <button id="timer-pause" class="btn-timer hidden" title="Pause">⏸</button>
+      <button id="timer-resume" class="btn-timer hidden" title="Resume">▶</button>
+      <button id="timer-reset" class="btn-timer" title="Reset">⏹</button>
+    </div>
+  </div>
 
   <!-- MODAL API KEY -->
   <div id="key-modal" class="modal hidden" role="dialog" aria-modal="true">

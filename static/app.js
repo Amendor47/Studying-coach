@@ -73,8 +73,7 @@ function fmt(sec) {
 }
 
 function updateDisplay() {
-  timerEl.textContent = fmt(remaining);
-  labelEl.textContent = mode === 'work' ? 'Travail' : 'Pause';
+  labelEl.textContent = fmt(remaining);
 }
 
 function switchMode(next) {
@@ -207,6 +206,14 @@ uploadBtn.addEventListener('click', async () => {
 });
 
 aiBtn.addEventListener('click', async () => {
+  // Check if API key is available first
+  const configResp = await fetch('/api/config');
+  const configData = await configResp.json();
+  if (!configData.has_key) {
+    keyModal.classList.remove('hidden');
+    return;
+  }
+  
   const text = document.getElementById('source-text').value;
   const resp = await fetch('/api/ai/analyze', {
     method: 'POST',
@@ -514,4 +521,18 @@ saveKey.addEventListener('click', async () => {
   aiBtn.disabled = false;
 });
 
-checkKey();
+// Allow dismissing the modal with Escape key or clicking outside
+keyModal?.addEventListener('click', (e) => {
+  if (e.target === keyModal) {
+    keyModal.classList.add('hidden');
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !keyModal?.classList.contains('hidden')) {
+    keyModal.classList.add('hidden');
+  }
+});
+
+// Only check for API key when user actually wants to use AI features
+// checkKey(); // Removed automatic check

@@ -35,6 +35,39 @@ app = Flask(
 teacher = LocalTeacher()
 
 
+@app.after_request
+def after_request(response):
+    """Safe after_request handler that prevents RuntimeError on static files."""
+    # Skip ETag generation for static files
+    if request.endpoint == 'static':
+        return response
+    
+    # Skip for streaming responses
+    if response.is_streamed:
+        return response
+    
+    # Skip for file downloads and binary responses
+    if response.mimetype and (
+        response.mimetype.startswith('image/') or 
+        response.mimetype.startswith('video/') or
+        response.mimetype.startswith('audio/') or
+        response.mimetype == 'application/octet-stream'
+    ):
+        return response
+    
+    # Only add ETag for regular responses with accessible data
+    try:
+        if hasattr(response, 'get_data'):
+            data = response.get_data(as_text=False)
+            if data:
+                response.headers['ETag'] = f'"{hash(data)}"'
+    except (RuntimeError, AttributeError):
+        # Silently skip ETag generation if data is not accessible
+        pass
+    
+    return response
+
+
 # ---- configuration & API key management ----
 ENV_FILE = Path(".env")
 
@@ -390,6 +423,21 @@ def chat_route():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_file('static/favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+
+@app.route('/apple-touch-icon.png')
+def apple_touch_icon():
+    return send_file('static/apple-touch-icon.png', mimetype='image/png')
+
+
+@app.route('/apple-touch-icon-precomposed.png')
+def apple_touch_icon_precomposed():
+    return send_file('static/apple-touch-icon-precomposed.png', mimetype='image/png')
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+from .rag import get_context
+
 CACHE_DIR = Path("cache/llm")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = Path("logs/ai.log")
@@ -62,7 +64,11 @@ def analyze_text(text: str, reason: str = "") -> List[Dict]:
         "Tu es un coach de révision FR. Retourne uniquement un JSON avec les"
         " listes 'flashcards' et 'exercices'."
     )
-    user = text + "\nStrict JSON"
+    context = "\n\n".join(get_context(text, 5))
+    user = text
+    if context:
+        user += "\n\nContexte:\n" + context
+    user += "\nStrict JSON"
 
     def call_fn(sys: str, usr: str) -> Dict[str, Any]:
         """Perform the actual LLM API call.

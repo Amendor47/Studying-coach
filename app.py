@@ -185,60 +185,65 @@ def upload_file():
         tmp_path = safe_save_upload(uploaded, suffix)
         
         try:
+            # Initialize variables for both code paths
+            text = ""
+            advanced_metadata = {}
+            
             # Use advanced document analysis if requested
             if use_advanced_analysis:
                 from services.advanced_document_analysis import advanced_document_analyzer
                 
                 analysis_result = advanced_document_analyzer.analyze_document(
-                tmp_path.as_posix(), uploaded.filename
-            )
-            
-            # Convert analyzed content back to text for existing pipeline
-            segments = analysis_result.get("segments", [])
-            text = "\n\n".join(seg["content"] for seg in segments if seg["content"])
-            
-            # Store advanced analysis results for later use (converted to serializable format)
-            advanced_metadata = {}
-            if analysis_result:
-                doc_meta = analysis_result.get("metadata")
-                if doc_meta:
-                    # Convert DocumentMetadata to dict
-                    advanced_metadata = {
-                        "document_metadata": {
-                            "filename": doc_meta.filename,
-                            "file_type": doc_meta.file_type,
-                            "document_type": doc_meta.document_type.value if hasattr(doc_meta.document_type, 'value') else str(doc_meta.document_type),
-                            "language": doc_meta.language,
-                            "page_count": doc_meta.page_count,
-                            "word_count": doc_meta.word_count,
-                            "has_formulas": doc_meta.has_formulas,
-                            "has_images": doc_meta.has_images,
-                            "has_tables": doc_meta.has_tables,
-                            "complexity_score": doc_meta.complexity_score,
-                            "reading_level": doc_meta.reading_level
-                        },
-                        "formulas": [
-                            {
-                                "original_text": f.original_text,
-                                "latex_representation": f.latex_representation,
-                                "formula_type": f.formula_type,
-                                "variables": f.variables,
-                                "constants": f.constants,
-                                "operations": f.operations,
-                                "complexity_level": f.complexity_level,
-                                "subject_area": f.subject_area
-                            }
-                            for f in analysis_result.get("formulas", [])
-                        ],
-                        "classified_content": analysis_result.get("classified_content", {}),
-                        "learning_objectives": analysis_result.get("learning_objectives", []),
-                        "concept_map": analysis_result.get("concept_map", {}),
-                        "educational_insights": analysis_result.get("educational_insights", {})
-                    }
+                    tmp_path.as_posix(), uploaded.filename
+                )
+                
+                # Convert analyzed content back to text for existing pipeline
+                if analysis_result:
+                    segments = analysis_result.get("segments", [])
+                    text = "\n\n".join(seg["content"] for seg in segments if seg["content"])
+                    
+                    # Store advanced analysis results for later use (converted to serializable format)
+                    doc_meta = analysis_result.get("metadata")
+                    if doc_meta:
+                        # Convert DocumentMetadata to dict
+                        advanced_metadata = {
+                            "document_metadata": {
+                                "filename": doc_meta.filename,
+                                "file_type": doc_meta.file_type,
+                                "document_type": doc_meta.document_type.value if hasattr(doc_meta.document_type, 'value') else str(doc_meta.document_type),
+                                "language": doc_meta.language,
+                                "page_count": doc_meta.page_count,
+                                "word_count": doc_meta.word_count,
+                                "has_formulas": doc_meta.has_formulas,
+                                "has_images": doc_meta.has_images,
+                                "has_tables": doc_meta.has_tables,
+                                "complexity_score": doc_meta.complexity_score,
+                                "reading_level": doc_meta.reading_level
+                            },
+                            "formulas": [
+                                {
+                                    "original_text": f.original_text,
+                                    "latex_representation": f.latex_representation,
+                                    "formula_type": f.formula_type,
+                                    "variables": f.variables,
+                                    "constants": f.constants,
+                                    "operations": f.operations,
+                                    "complexity_level": f.complexity_level,
+                                    "subject_area": f.subject_area
+                                }
+                                for f in analysis_result.get("formulas", [])
+                            ],
+                            "classified_content": analysis_result.get("classified_content", {}),
+                            "learning_objectives": analysis_result.get("learning_objectives", []),
+                            "concept_map": analysis_result.get("concept_map", {}),
+                            "educational_insights": analysis_result.get("educational_insights", {})
+                        }
+                else:
+                    # Fallback if advanced analysis fails
+                    text = extract_text(tmp_path.as_posix(), uploaded.filename)
             else:
                 # Fallback to original text extraction
                 text = extract_text(tmp_path.as_posix(), uploaded.filename)
-                advanced_metadata = {}
                 
         finally:
             safe_unlink(tmp_path)

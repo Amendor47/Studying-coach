@@ -1,6 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash
 cd "$(dirname "$0")"
-echo "==== Coach de Révision — LANCEUR ONE-CLICK ===="
+echo "==== Coach de Révision — LANCEUR ONE-CLICK LINUX/WSL ===="
 
 # Colors for output
 RED='\033[0;31m'
@@ -27,18 +27,31 @@ fi
 
 # 2. PYTHON ET ENVIRONNEMENT
 print_step "Vérification Python3..."
-if ! command -v python3 >/dev/null 2>&1; then
-  print_error "Python3 requis. Installez via https://www.python.org/downloads/"
-  exit 1
+if command -v python3 >/dev/null 2>&1; then
+    PYTHON_CMD="python3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_VERSION=$(python --version 2>&1)
+    if [[ $PYTHON_VERSION == *"Python 3"* ]]; then
+        PYTHON_CMD="python"
+    else
+        print_error "Python 3 requis. Version détectée: $PYTHON_VERSION"
+        exit 1
+    fi
+else
+    print_error "Python3 requis. Installez via votre gestionnaire de paquets:"
+    echo "  Ubuntu/Debian: sudo apt install python3 python3-venv python3-pip"
+    echo "  CentOS/RHEL:   sudo yum install python3 python3-venv python3-pip"
+    echo "  Arch:          sudo pacman -S python python-pip"
+    exit 1
 fi
-PYTHON_VERSION=$(python3 --version)
-print_ok "Python3 trouvé: $PYTHON_VERSION"
+PYTHON_VERSION=$($PYTHON_CMD --version)
+print_ok "Python trouvé: $PYTHON_VERSION"
 
 # 3. ENVIRONNEMENT VIRTUEL
 print_step "Configuration environnement virtuel..."
 if [ ! -d ".venv" ]; then 
     print_step "Création de l'environnement virtuel..."
-    python3 -m venv .venv
+    $PYTHON_CMD -m venv .venv
 fi
 source .venv/bin/activate
 print_ok "Environnement virtuel activé"
@@ -71,28 +84,23 @@ temperature: 0.1
 EOF
 fi
 
-# Manage .env file - append missing Ollama config without overwriting existing keys
+# Create .env if missing 
 if [ ! -f ".env" ]; then
-  echo "Création du fichier .env avec la configuration Ollama par défaut..."
+  print_step "Création fichier .env..."
   cat > .env << EOF
-SC_PROFILE=local
-LLM_PROVIDER=ollama
-OLLAMA_MODEL=llama3:8b
+# Configuration Coach de Révision
 OLLAMA_HOST=http://127.0.0.1:11434
+CORS_ORIGINS=http://127.0.0.1:5000,http://localhost:5000,http://127.0.0.1:5001,http://localhost:5001
+FLASK_ENV=development
+DEBUG=true
 EOF
 else
   # Append missing keys only
-  if ! grep -q "SC_PROFILE" .env; then
-    echo "SC_PROFILE=local" >> .env
-  fi
-  if ! grep -q "LLM_PROVIDER" .env; then
-    echo "LLM_PROVIDER=ollama" >> .env
-  fi
-  if ! grep -q "OLLAMA_MODEL" .env; then
-    echo "OLLAMA_MODEL=llama3:8b" >> .env
-  fi
   if ! grep -q "OLLAMA_HOST" .env; then
     echo "OLLAMA_HOST=http://127.0.0.1:11434" >> .env
+  fi
+  if ! grep -q "CORS_ORIGINS" .env; then
+    echo "CORS_ORIGINS=http://127.0.0.1:5000,http://localhost:5000" >> .env
   fi
 fi
 
@@ -104,11 +112,8 @@ if command -v ollama >/dev/null 2>&1; then
     # Check if ollama is running
     if ! curl -s --connect-timeout 2 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
         print_step "Démarrage Ollama..."
-        if command -v ollama >/dev/null 2>&1; then
-            # Try to start ollama in background
-            nohup ollama serve >/dev/null 2>&1 &
-            sleep 3
-        fi
+        nohup ollama serve >/dev/null 2>&1 &
+        sleep 3
     fi
     
     # Pull required models if not present (non-blocking for faster startup)
@@ -132,13 +137,22 @@ if command -v ollama >/dev/null 2>&1; then
         print_warn "Ollama serveur non accessible - les modèles ne seront pas téléchargés"
     fi
 else
-    print_warn "Ollama non trouvé - installation recommandée depuis https://ollama.ai"
+    print_warn "Ollama non trouvé - installation recommandée:"
+    echo "  curl -fsSL https://ollama.ai/install.sh | sh"
+    echo "  Ou via https://ollama.ai/download"
     print_warn "L'application fonctionnera en mode dégradé (sans IA)"
 fi
 
 # Function to check if a port is available
 is_port_available() {
-  ! lsof -i :$1 >/dev/null 2>&1
+  if command -v lsof >/dev/null 2>&1; then
+    ! lsof -i :$1 >/dev/null 2>&1
+  elif command -v netstat >/dev/null 2>&1; then
+    ! netstat -ln | grep :$1 >/dev/null 2>&1
+  else
+    # Fallback - assume port is available
+    true
+  fi
 }
 
 # 7. RECHERCHE PORT LIBRE
@@ -172,10 +186,14 @@ fi
 print_step "Démarrage Coach de Révision sur http://127.0.0.1:$PORT"
 
 # Open browser automatically after a short delay
-if command -v open >/dev/null 2>&1; then
-  (sleep 3 && open "http://127.0.0.1:$PORT") &
-elif command -v xdg-open >/dev/null 2>&1; then
+if command -v xdg-open >/dev/null 2>&1; then
   (sleep 3 && xdg-open "http://127.0.0.1:$PORT") &
+elif command -v firefox >/dev/null 2>&1; then
+  (sleep 3 && firefox "http://127.0.0.1:$PORT") &
+elif command -v google-chrome >/dev/null 2>&1; then
+  (sleep 3 && google-chrome "http://127.0.0.1:$PORT") &
+elif command -v chromium >/dev/null 2>&1; then
+  (sleep 3 && chromium "http://127.0.0.1:$PORT") &
 else
   echo "🌐 Ouvrez http://127.0.0.1:$PORT dans votre navigateur"
 fi
@@ -190,4 +208,4 @@ print_ok "======================================"
 echo ""
 
 # Start the application
-python3 app.py
+$PYTHON_CMD app.py

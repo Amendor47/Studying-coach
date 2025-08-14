@@ -463,13 +463,22 @@
     </div>
   </div>
 
-  <!-- Base URL configuration -->
-  <script>window.__BASE_URL__="";</script>
+  <!-- Base URL configuration - dynamically set -->
+  <script>
+    // Set base URL dynamically
+    window.__BASE_URL__ = window.location.protocol + '//' + window.location.host;
+    
+    // For development, also support explicit port setting
+    if (window.location.port) {
+      window.__BASE_URL__ = window.location.protocol + '//' + window.location.hostname + ':' + window.location.port;
+    }
+  </script>
   <script src="{{ url_for('static', filename='baseurl.js') }}"></script>
   <script src="{{ url_for('static', filename='ui_error_overlay.js') }}"></script>
   <script src="{{ url_for('static', filename='dom_probe.js') }}" defer></script>
   
   <!-- Scripts -->
+  <script src="{{ url_for('static', filename='degraded_mode.js') }}" defer></script>
   <script src="{{ url_for('static', filename='performance-monitor.js') }}" defer></script>
   <script src="{{ url_for('static', filename='advanced-flashcards.js') }}" defer></script>
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>

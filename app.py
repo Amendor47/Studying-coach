@@ -1224,7 +1224,48 @@ def find_available_port(start_port=5000, max_port=5010):
 
 
 if __name__ == "__main__":
+    """
+    Main execution block with proper error handling and fallbacks.
+    Addresses the 'Python User Interface not working' issue by:
+    1. Graceful handling of missing dependencies
+    2. Clear error messages and solutions
+    3. Fallback to minimal interface when needed
+    """
     try:
+        print("🎯 Study Coach - Starting Interface")
+        print("=" * 40)
+        
+        # Check for critical dependencies first
+        missing_deps = []
+        
+        # Check Flask (already imported above with try/except)
+        try:
+            from flask import Flask
+        except ImportError:
+            missing_deps.append("flask")
+        
+        # Check other important dependencies
+        try:
+            from services.analyzer import analyze_offline
+        except ImportError:
+            print("⚠️  Advanced analysis services not available")
+            missing_deps.append("analyzer_services")
+        
+        if missing_deps:
+            print(f"⚠️  Missing dependencies: {', '.join(missing_deps)}")
+            print("🔧 Attempting to use fallback minimal interface...")
+            
+            # Try to run minimal app instead
+            minimal_app_path = Path(__file__).parent / "minimal_app.py"
+            if minimal_app_path.exists():
+                print("✅ Starting minimal interface...")
+                import subprocess
+                sys.exit(subprocess.call([sys.executable, str(minimal_app_path)]))
+            else:
+                print("❌ No fallback interface available")
+                print("Please install dependencies: pip install flask python-dotenv flask-cors")
+                sys.exit(1)
+        
         # Tentative de port auto
         desired_port = int(os.getenv("PORT", 5000))
         try:
@@ -1242,16 +1283,47 @@ if __name__ == "__main__":
         host = "127.0.0.1"
         base_url = f"http://{host}:{port}"
         
+        print()
         logger.info(f"🚀 Study Coach démarré sur {base_url}")
         logger.info("📋 Endpoints disponibles:")
         logger.info(f"  • Interface: {base_url}")
         logger.info(f"  • Health: {base_url}/api/health") 
         logger.info(f"  • LLM Health: {base_url}/api/health/llm")
         logger.info(f"  • Upload: {base_url}/api/upload")
+        print(f"🌐 Opening browser automatically...")
+        print(f"🛑 Press Ctrl+C to stop")
+        print()
+        
+        # Auto-open browser after delay
+        def open_browser():
+            import time
+            import webbrowser
+            time.sleep(2)
+            try:
+                webbrowser.open(base_url)
+            except:
+                pass
+        
+        import threading
+        browser_thread = threading.Thread(target=open_browser, daemon=True)
+        browser_thread.start()
         
         app.run(host=host, port=port, debug=os.getenv("DEBUG", "1") == "1")
         
+    except KeyboardInterrupt:
+        print("\n👋 Application stopped by user")
+    except ImportError as e:
+        print(f"\n❌ Missing dependency: {e}")
+        print("🔧 Solutions:")
+        print("  1. Install missing packages: pip install flask python-dotenv flask-cors")
+        print("  2. Use minimal interface: python minimal_app.py")  
+        print("  3. Use simple server: python simple_server.py")
+        sys.exit(1)
     except Exception as e:
         logger.error(f"Erreur de démarrage: {e}")
-        print(f"❌ Impossible de démarrer l'application: {e}")
+        print(f"\n❌ Impossible de démarrer l'application: {e}")
+        print("🔧 Alternatives:")
+        print("  • python minimal_app.py (minimal interface)")
+        print("  • python simple_server.py (basic server)")
+        print("  • python gui_launcher.py (GUI launcher)")
         sys.exit(1)

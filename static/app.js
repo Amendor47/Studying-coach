@@ -73,8 +73,8 @@ function fmt(sec) {
 }
 
 function updateDisplay() {
-  timerEl.textContent = fmt(remaining);
-  labelEl.textContent = mode === 'work' ? 'Travail' : 'Pause';
+  if (timerEl) timerEl.textContent = fmt(remaining);
+  if (labelEl) labelEl.textContent = mode === 'work' ? 'Travail' : 'Pause';
 }
 
 function switchMode(next) {
@@ -115,7 +115,7 @@ function startTick() {
   }, 1000);
 }
 
-startBtn.addEventListener('click', () => {
+startBtn?.addEventListener('click', () => {
   stopTick();
   targetMinutes = parseInt(sessionSel.value || '25', 10);
   elapsedTotal = 0;
@@ -125,9 +125,9 @@ startBtn.addEventListener('click', () => {
   startTick();
 });
 
-pauseBtn.addEventListener('click', () => stopTick());
-resumeBtn.addEventListener('click', () => startTick());
-resetBtn.addEventListener('click', () => {
+pauseBtn?.addEventListener('click', () => stopTick());
+resumeBtn?.addEventListener('click', () => startTick());
+resetBtn?.addEventListener('click', () => {
   stopTick();
   elapsedTotal = 0;
   mode = 'work';
@@ -135,7 +135,7 @@ resetBtn.addEventListener('click', () => {
   updateDisplay();
 });
 
-sessionSel.addEventListener('change', () => {
+sessionSel?.addEventListener('change', () => {
   targetMinutes = parseInt(sessionSel.value || '25', 10);
 });
 
@@ -450,10 +450,8 @@ if (document.readyState === 'loading') {
 } else {
   initializeAppSafely();
 }
-  loadDueCards();
-});
 
-aiBtn.addEventListener('click', async () => {
+aiBtn?.addEventListener('click', async () => {
   const text = document.getElementById('source-text').value;
   const resp = await fetch('/api/ai/analyze', {
     method: 'POST',

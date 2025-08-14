@@ -18,9 +18,14 @@ class RAGIndex:
     """In-memory semantic index with optional FAISS backend."""
 
     def __init__(self) -> None:
-        self.model = (
-            SentenceTransformer("all-MiniLM-L6-v2") if SentenceTransformer else None
-        )
+        # Graceful initialization of SentenceTransformer model
+        self.model = None
+        if SentenceTransformer:
+            try:
+                self.model = SentenceTransformer("all-MiniLM-L6-v2")
+            except Exception:  # Handle network/download errors gracefully
+                self.model = None
+        
         self.index = (
             faiss.IndexFlatIP(self.model.get_sentence_embedding_dimension())
             if self.model and faiss
@@ -32,15 +37,22 @@ class RAGIndex:
         """Segment text and build the search index."""
         self.passages = [p.strip() for p in text.splitlines() if p.strip()]
         if self.index and self.model and self.passages:
-            vectors = self.model.encode(self.passages)
-            self.index.add(vectors)
+            try:
+                vectors = self.model.encode(self.passages)
+                # Reset index to ensure consistency
+                self.index.reset()
+                self.index.add(vectors)
+            except Exception:
+                # If encoding fails, clear the index to maintain consistency
+                self.index.reset()
 
     def search(self, query: str, k: int = 5) -> List[str]:
         """Return top-k relevant passages for *query*."""
         if self.index and self.model and self.passages:
             q = self.model.encode([query])
             _, idx = self.index.search(q, min(k, len(self.passages)))
-            return [self.passages[i] for i in idx[0]]
+            # Add bounds checking to prevent IndexError
+            return [self.passages[i] for i in idx[0] if 0 <= i < len(self.passages)]
         return self.passages[:k]
 
 

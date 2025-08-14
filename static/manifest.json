@@ -11,16 +11,9 @@
   "lang": "fr-FR",
   "icons": [
     {
-      "src": "icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512x512.png", 
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ],
   "shortcuts": [
@@ -29,21 +22,21 @@
       "short_name": "Révisions",
       "description": "Commencer une session de révision",
       "url": "/#flash",
-      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "logo.svg", "sizes": "any" }]
     },
     {
       "name": "Importer document",
       "short_name": "Import",
       "description": "Analyser un nouveau document",
       "url": "/#import",
-      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "logo.svg", "sizes": "any" }]
     },
     {
       "name": "Analytics",
       "short_name": "Progrès",
       "description": "Voir les statistiques d'apprentissage",
       "url": "/#analytics",
-      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "logo.svg", "sizes": "any" }]
     }
   ],
   "screenshots": [

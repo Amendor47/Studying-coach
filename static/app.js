@@ -450,8 +450,6 @@ if (document.readyState === 'loading') {
 } else {
   initializeAppSafely();
 }
-  loadDueCards();
-});
 
 aiBtn.addEventListener('click', async () => {
   const text = document.getElementById('source-text').value;
